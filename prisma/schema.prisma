@@ -120,6 +120,11 @@ model Player {
   // Career History
   previousTeams         String[]         // Previous clubs/teams played for
   injuryHistory         String[]         // Past injuries e.g., ["Hamstring - 2024", "Shoulder - 2023"]
+  
+  // Experience Background
+  isRookie              Boolean  @default(false)  // New to leather ball cricket
+  tennisBallBackground  Boolean  @default(false)  // Previously played only tennis ball cricket
+  yearsPlaying          Int?                       // Total years playing cricket
 
   // Team Status
   captainChoice   Int      @default(2) // 1 = first choice, 2 = second, 3 = third

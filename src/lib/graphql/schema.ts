@@ -120,6 +120,11 @@ export const typeDefs = gql`
     previousTeams: [String!]!
     injuryHistory: [String!]!
     
+    # Experience Background
+    isRookie: Boolean!
+    tennisBallBackground: Boolean!
+    yearsPlaying: Int
+    
     # Team Status
     captainChoice: Int!
     isActive: Boolean!
@@ -478,6 +483,9 @@ export const typeDefs = gql`
     trainingAttendance: Int
     previousTeams: [String!]
     injuryHistory: [String!]
+    isRookie: Boolean
+    tennisBallBackground: Boolean
+    yearsPlaying: Int
     captainChoice: Int
     isWicketkeeper: Boolean
   }
@@ -506,6 +514,9 @@ export const typeDefs = gql`
     trainingAttendance: Int
     previousTeams: [String!]
     injuryHistory: [String!]
+    isRookie: Boolean
+    tennisBallBackground: Boolean
+    yearsPlaying: Int
     captainChoice: Int
     isActive: Boolean
     isWicketkeeper: Boolean

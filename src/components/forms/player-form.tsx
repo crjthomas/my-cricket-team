@@ -34,6 +34,10 @@ interface PlayerFormData {
   // Career History
   previousTeams: string[]
   injuryHistory: string[]
+  // Experience Background
+  isRookie: boolean
+  tennisBallBackground: boolean
+  yearsPlaying: number | null
   // Team Status
   captainChoice: number
   isWicketkeeper: boolean
@@ -71,6 +75,9 @@ const defaultFormData: PlayerFormData = {
   trainingAttendance: null,
   previousTeams: [],
   injuryHistory: [],
+  isRookie: false,
+  tennisBallBackground: false,
+  yearsPlaying: null,
   captainChoice: 2,
   isWicketkeeper: false,
   isCaptain: false,
@@ -572,6 +579,57 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
                 {variation}
               </Badge>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Experience Background */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Experience Background</CardTitle>
+          <CardDescription>Player&apos;s cricket background and experience level</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium">Years Playing Cricket</label>
+              <input
+                type="number"
+                value={formData.yearsPlaying || ''}
+                onChange={(e) => updateField('yearsPlaying', e.target.value ? parseInt(e.target.value) : null)}
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                placeholder="e.g., 5"
+                min="0"
+                max="50"
+              />
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap gap-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.isRookie}
+                onChange={(e) => updateField('isRookie', e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+              />
+              <div>
+                <span className="text-sm font-medium">Rookie</span>
+                <p className="text-xs text-muted-foreground">New to leather ball cricket</p>
+              </div>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.tennisBallBackground}
+                onChange={(e) => updateField('tennisBallBackground', e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+              />
+              <div>
+                <span className="text-sm font-medium">Tennis Ball Background</span>
+                <p className="text-xs text-muted-foreground">Previously played only tennis ball cricket</p>
+              </div>
+            </label>
           </div>
         </CardContent>
       </Card>

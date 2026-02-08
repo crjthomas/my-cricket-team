@@ -56,6 +56,10 @@ interface PlayerData {
   // Career History
   previousTeams: string[]
   injuryHistory: string[]
+  // Experience Background
+  isRookie: boolean
+  tennisBallBackground: boolean
+  yearsPlaying: number | null
   // Team Status
   captainChoice: number
   isCaptain: boolean
@@ -121,6 +125,9 @@ export default function PlayerDetailPage() {
                 trainingAttendance
                 previousTeams
                 injuryHistory
+                isRookie
+                tennisBallBackground
+                yearsPlaying
                 captainChoice
                 isCaptain
                 isViceCaptain
@@ -276,6 +283,16 @@ export default function PlayerDetailPage() {
                 {player.captainChoice === 1 && (
                   <Badge variant="outline" className="gap-1">
                     <Star className="h-3 w-3" /> 1st Choice
+                  </Badge>
+                )}
+                {player.isRookie && (
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    Rookie
+                  </Badge>
+                )}
+                {player.tennisBallBackground && (
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                    Tennis Ball Background
                   </Badge>
                 )}
               </div>
@@ -509,14 +526,33 @@ export default function PlayerDetailPage() {
               Career History
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {player.yearsPlaying !== null && (
+              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                <span className="text-2xl font-bold text-pitch-600">{player.yearsPlaying}</span>
+                <span className="text-sm text-muted-foreground">years playing cricket</span>
+              </div>
+            )}
+            
+            <div className="flex flex-wrap gap-2">
+              {player.isRookie && (
+                <Badge className="bg-blue-100 text-blue-700">New to Leather Ball</Badge>
+              )}
+              {player.tennisBallBackground && (
+                <Badge className="bg-amber-100 text-amber-700">Tennis Ball Experience</Badge>
+              )}
+            </div>
+
             {player.previousTeams.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {player.previousTeams.map((team, index) => (
-                  <Badge key={index} variant="secondary">
-                    {team}
-                  </Badge>
-                ))}
+              <div>
+                <h4 className="text-sm font-medium mb-2">Previous Teams</h4>
+                <div className="flex flex-wrap gap-2">
+                  {player.previousTeams.map((team, index) => (
+                    <Badge key={index} variant="secondary">
+                      {team}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">No previous teams listed</p>
