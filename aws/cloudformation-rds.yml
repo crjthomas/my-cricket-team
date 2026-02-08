@@ -1,0 +1,116 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'RDS PostgreSQL for Cricket Team Management App'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name
+
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.micro
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t3.medium
+    Description: RDS instance type
+
+  DBName:
+    Type: String
+    Default: cricket_team
+    Description: Database name
+
+  DBUsername:
+    Type: String
+    Default: postgres
+    NoEcho: true
+    Description: Database admin username
+
+  DBPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: Database admin password
+
+Resources:
+  # Security Group for RDS
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Cricket Team RDS
+      GroupName: !Sub cricket-team-db-sg-${Environment}
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 0.0.0.0/0  # Restrict this in production!
+      Tags:
+        - Key: Name
+          Value: !Sub cricket-team-db-sg-${Environment}
+
+  # RDS PostgreSQL Instance
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub cricket-team-db-${Environment}
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: postgres
+      EngineVersion: '15'
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      DBName: !Ref DBName
+      AllocatedStorage: 20
+      MaxAllocatedStorage: 100
+      StorageType: gp2
+      PubliclyAccessible: true  # Set to false in production with VPC
+      BackupRetentionPeriod: 7
+      MultiAZ: false  # Set to true for production
+      AutoMinorVersionUpgrade: true
+      DeletionProtection: false  # Set to true for production
+      VPCSecurityGroups:
+        - !GetAtt DBSecurityGroup.GroupId
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: cricket-team
+
+  # Store Database URL in Secrets Manager
+  DBSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub cricket-team/${Environment}/database-url
+      Description: Database connection URL for Cricket Team app
+      SecretString: !Sub 'postgresql://${DBUsername}:${DBPassword}@${DBInstance.Endpoint.Address}:${DBInstance.Endpoint.Port}/${DBName}'
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+Outputs:
+  DBEndpoint:
+    Description: RDS PostgreSQL endpoint
+    Value: !GetAtt DBInstance.Endpoint.Address
+    Export:
+      Name: !Sub ${AWS::StackName}-DBEndpoint
+
+  DBPort:
+    Description: RDS PostgreSQL port
+    Value: !GetAtt DBInstance.Endpoint.Port
+    Export:
+      Name: !Sub ${AWS::StackName}-DBPort
+
+  DatabaseURL:
+    Description: Full database connection URL
+    Value: !Sub 'postgresql://${DBUsername}:****@${DBInstance.Endpoint.Address}:${DBInstance.Endpoint.Port}/${DBName}'
+
+  SecretArn:
+    Description: ARN of the database secret
+    Value: !Ref DBSecret
+    Export:
+      Name: !Sub ${AWS::StackName}-SecretArn
+

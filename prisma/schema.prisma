@@ -1,0 +1,602 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// PLAYER MANAGEMENT
+// ============================================
+
+model Player {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Basic Info
+  name          String
+  email         String?  @unique
+  phone         String?
+  dateOfBirth   DateTime?
+  profileImage  String?
+  jerseyNumber  Int?
+
+  // Cricket Attributes
+  primaryRole     PlayerRole
+  battingStyle    BattingStyle
+  bowlingStyle    BowlingStyle
+  battingPosition BattingPosition
+
+  // Skill Ratings (1-10)
+  battingSkill    Int @default(5)
+  bowlingSkill    Int @default(5)
+  fieldingSkill   Int @default(5)
+  experienceLevel Int @default(5)
+
+  // Team Status
+  captainChoice   Int      @default(2) // 1 = first choice, 2 = second, 3 = third
+  isActive        Boolean  @default(true)
+  isCaptain       Boolean  @default(false)
+  isViceCaptain   Boolean  @default(false)
+  isWicketkeeper  Boolean  @default(false)
+
+  // Relations
+  seasonStats       SeasonStats[]
+  matchPerformances MatchPerformance[]
+  availabilities    PlayerAvailability[]
+  squadSelections   SquadPlayer[]
+  mediaAppearances  MediaTag[]
+
+  @@map("players")
+}
+
+enum PlayerRole {
+  BATSMAN
+  BOWLER
+  ALL_ROUNDER
+  WICKETKEEPER
+}
+
+enum BattingStyle {
+  RIGHT_HAND
+  LEFT_HAND
+}
+
+enum BowlingStyle {
+  FAST
+  MEDIUM_FAST
+  MEDIUM
+  SPIN_OFF
+  SPIN_LEG
+  SPIN_LEFT_ARM
+  NONE
+}
+
+enum BattingPosition {
+  OPENER
+  TOP_ORDER
+  MIDDLE_ORDER
+  LOWER_ORDER
+  FINISHER
+}
+
+// ============================================
+// SEASON & STATS TRACKING
+// ============================================
+
+model Season {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name        String // e.g., "Winter League 2026"
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean  @default(true)
+  description String?
+
+  // Stats
+  totalMatches    Int @default(0)
+  matchesPlayed   Int @default(0)
+  wins            Int @default(0)
+  losses          Int @default(0)
+  draws           Int @default(0)
+  noResults       Int @default(0)
+  currentPosition Int?
+  totalTeams      Int?
+
+  // Relations
+  matches     Match[]
+  seasonStats SeasonStats[]
+
+  @@map("seasons")
+}
+
+model SeasonStats {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  playerId String
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  seasonId String
+  season   Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  // Availability & Participation
+  matchesAvailable Int @default(0)
+  matchesPlayed    Int @default(0)
+  matchesSelected  Int @default(0)
+
+  // Batting Stats
+  innings        Int @default(0)
+  runsScored     Int @default(0)
+  ballsFaced     Int @default(0)
+  fours          Int @default(0)
+  sixes          Int @default(0)
+  notOuts        Int @default(0)
+  highestScore   Int @default(0)
+  fifties        Int @default(0)
+  hundreds       Int @default(0)
+  ducks          Int @default(0)
+
+  // Bowling Stats
+  oversBowled    Float   @default(0)
+  runsConceded   Int     @default(0)
+  wicketsTaken   Int     @default(0)
+  maidens        Int     @default(0)
+  bestBowling    String? // e.g., "4/25"
+  fourWickets    Int     @default(0)
+  fiveWickets    Int     @default(0)
+
+  // Fielding Stats
+  catches        Int @default(0)
+  runOuts        Int @default(0)
+  stumpings      Int @default(0)
+
+  // Form (calculated)
+  currentForm    PlayerForm @default(AVERAGE)
+
+  @@unique([playerId, seasonId])
+  @@map("season_stats")
+}
+
+enum PlayerForm {
+  EXCELLENT
+  GOOD
+  AVERAGE
+  POOR
+}
+
+// ============================================
+// MATCH MANAGEMENT
+// ============================================
+
+model Match {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Basic Info
+  matchDate   DateTime
+  matchNumber Int?
+  matchType   MatchType @default(LEAGUE)
+  status      MatchStatus @default(UPCOMING)
+
+  // Opponent Info
+  opponentId String
+  opponent   Opponent @relation(fields: [opponentId], references: [id])
+
+  // Venue & Conditions
+  venueId    String
+  venue      Venue    @relation(fields: [venueId], references: [id])
+  weather    WeatherCondition?
+  tossWinner TossWinner?
+  tossDecision TossDecision?
+
+  // Match Context
+  importance    MatchImportance @default(REGULAR)
+  leaguePosition Int?
+  matchesRemaining Int?
+
+  // Result
+  result          MatchResult?
+  ourScore        String?  // e.g., "185/6 (20)"
+  opponentScore   String?  // e.g., "172/9 (20)"
+  marginOfVictory String?  // e.g., "13 runs" or "4 wickets"
+  manOfMatch      String?
+
+  // Notes
+  captainNotes    String?
+  matchReport     String?
+
+  // Relations
+  seasonId         String
+  season           Season             @relation(fields: [seasonId], references: [id])
+  squad            Squad?
+  performances     MatchPerformance[]
+  availabilities   PlayerAvailability[]
+  media            Media[]
+
+  @@map("matches")
+}
+
+enum MatchType {
+  LEAGUE
+  KNOCKOUT
+  FRIENDLY
+  TOURNAMENT
+  PRACTICE
+}
+
+enum MatchStatus {
+  UPCOMING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  POSTPONED
+}
+
+enum MatchImportance {
+  MUST_WIN
+  IMPORTANT
+  REGULAR
+  LOW_STAKES
+}
+
+enum WeatherCondition {
+  SUNNY
+  CLOUDY
+  OVERCAST
+  CHANCE_OF_RAIN
+  RAINY
+  WINDY
+}
+
+enum TossWinner {
+  US
+  OPPONENT
+}
+
+enum TossDecision {
+  BAT
+  BOWL
+}
+
+enum MatchResult {
+  WON
+  LOST
+  DRAW
+  NO_RESULT
+  ABANDONED
+}
+
+// ============================================
+// OPPONENT & VENUE
+// ============================================
+
+model Opponent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name          String   @unique
+  shortName     String?
+  logo          String?
+  homeGround    String?
+
+  // Strength Ratings (1-10)
+  overallStrength  Int @default(5)
+  battingStrength  Int @default(5)
+  bowlingStrength  Int @default(5)
+  fieldingStrength Int @default(5)
+
+  // Key Info
+  keyPlayers    String[] // Array of notable player names
+  notes         String?
+  playingStyle  String?  // e.g., "Aggressive batting, tight bowling"
+
+  // Record against them
+  matchesPlayed Int @default(0)
+  matchesWon    Int @default(0)
+  matchesLost   Int @default(0)
+  matchesDrawn  Int @default(0)
+
+  matches Match[]
+
+  @@map("opponents")
+}
+
+model Venue {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name        String @unique
+  address     String?
+  city        String?
+  googleMapsUrl String?
+
+  // Ground Characteristics
+  pitchType     PitchType   @default(BALANCED)
+  boundarySize  BoundarySize @default(MEDIUM)
+  outfieldSpeed OutfieldSpeed @default(MEDIUM)
+
+  // Conditions
+  typicalConditions String? // e.g., "Usually dry, favors spinners"
+  averageFirstInningsScore Int?
+
+  matches Match[]
+
+  @@map("venues")
+}
+
+enum PitchType {
+  BATTING_FRIENDLY
+  BOWLING_FRIENDLY
+  BALANCED
+  SPIN_FRIENDLY
+  PACE_FRIENDLY
+}
+
+enum BoundarySize {
+  SMALL
+  MEDIUM
+  LARGE
+}
+
+enum OutfieldSpeed {
+  FAST
+  MEDIUM
+  SLOW
+}
+
+// ============================================
+// AVAILABILITY & SQUAD SELECTION
+// ============================================
+
+model PlayerAvailability {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  playerId String
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  matchId  String
+  match    Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  status AvailabilityStatus @default(PENDING)
+  note   String?
+  respondedAt DateTime?
+
+  @@unique([playerId, matchId])
+  @@map("player_availabilities")
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  UNAVAILABLE
+  MAYBE
+  PENDING
+}
+
+model Squad {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  matchId String @unique
+  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  // AI Selection Info
+  isAiGenerated      Boolean @default(false)
+  selectionMode      SelectionMode @default(BALANCED)
+  aiReasoning        String? // Full AI explanation
+  winProbability     Float?
+  fairnessScore      Float?
+
+  // Override Info
+  wasModified        Boolean @default(false)
+  modificationReason String?
+
+  players SquadPlayer[]
+
+  @@map("squads")
+}
+
+enum SelectionMode {
+  WIN_FOCUSED
+  BALANCED
+  OPPORTUNITY_FOCUSED
+}
+
+model SquadPlayer {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  squadId String
+  squad   Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  playerId String
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  // Selection Details
+  battingOrder   Int?
+  isPlaying      Boolean @default(true) // false = 12th man/reserve
+  roleInMatch    String? // e.g., "Opening batsman", "Death bowler"
+  selectionReason String?
+
+  @@unique([squadId, playerId])
+  @@map("squad_players")
+}
+
+// ============================================
+// MATCH PERFORMANCE
+// ============================================
+
+model MatchPerformance {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  playerId String
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  matchId  String
+  match    Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  // Batting
+  didBat        Boolean @default(false)
+  battingOrder  Int?
+  runsScored    Int     @default(0)
+  ballsFaced    Int     @default(0)
+  fours         Int     @default(0)
+  sixes         Int     @default(0)
+  isNotOut      Boolean @default(false)
+  howOut        String? // e.g., "caught", "bowled", "lbw"
+  dismissedBy   String? // Bowler name
+
+  // Bowling
+  didBowl       Boolean @default(false)
+  oversBowled   Float   @default(0)
+  runsConceded  Int     @default(0)
+  wicketsTaken  Int     @default(0)
+  maidens       Int     @default(0)
+  wides         Int     @default(0)
+  noBalls       Int     @default(0)
+
+  // Fielding
+  catches       Int     @default(0)
+  runOuts       Int     @default(0)
+  stumpings     Int     @default(0)
+  droppedCatches Int    @default(0)
+
+  // Awards
+  isManOfMatch  Boolean @default(false)
+  captainRating Int?    // 1-5 rating from captain
+
+  notes         String?
+
+  @@unique([playerId, matchId])
+  @@map("match_performances")
+}
+
+// ============================================
+// MEDIA MANAGEMENT
+// ============================================
+
+model Media {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type        MediaType
+  url         String
+  thumbnailUrl String?
+  title       String?
+  description String?
+  
+  // Metadata
+  fileSize    Int?
+  duration    Int?      // For videos, in seconds
+  width       Int?
+  height      Int?
+
+  // Relations
+  matchId     String?
+  match       Match?    @relation(fields: [matchId], references: [id], onDelete: SetNull)
+  
+  // AI-generated caption
+  aiCaption   String?
+  
+  tags        MediaTag[]
+  
+  @@map("media")
+}
+
+model MediaTag {
+  id       String @id @default(cuid())
+  
+  mediaId  String
+  media    Media  @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  
+  playerId String?
+  player   Player? @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  
+  tag      String  // Can be player name or custom tag
+  
+  @@unique([mediaId, tag])
+  @@map("media_tags")
+}
+
+enum MediaType {
+  PHOTO
+  VIDEO
+  DOCUMENT
+}
+
+// ============================================
+// AI & SYSTEM
+// ============================================
+
+model AiInteraction {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  type        AiInteractionType
+  prompt      String
+  response    String
+  tokensUsed  Int?
+  modelUsed   String?
+  
+  // Context
+  matchId     String?
+  playerId    String?
+  
+  // For feedback/improvement
+  wasHelpful  Boolean?
+  userFeedback String?
+
+  @@map("ai_interactions")
+}
+
+enum AiInteractionType {
+  SQUAD_SELECTION
+  MATCH_ANALYSIS
+  TRAINING_PLAN
+  PLAYER_DEVELOPMENT
+  CHAT_ASSISTANT
+  MEDIA_CAPTION
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  type        ActivityType
+  title       String
+  description String?
+  
+  // Actor
+  actorName   String?
+  
+  // References
+  entityType  String?  // "player", "match", "squad"
+  entityId    String?
+
+  @@map("activities")
+}
+
+enum ActivityType {
+  PLAYER_ADDED
+  PLAYER_UPDATED
+  MATCH_CREATED
+  MATCH_UPDATED
+  SQUAD_SELECTED
+  AVAILABILITY_UPDATED
+  MEDIA_UPLOADED
+  SEASON_STARTED
+  AI_RECOMMENDATION
+}
+

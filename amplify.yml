@@ -1,0 +1,22 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+    build:
+      commands:
+        - npm run db:generate
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*
+
+  # Environment variables are set in Amplify Console
+  # DATABASE_URL, ANTHROPIC_API_KEY, NEXT_PUBLIC_APP_URL
+
