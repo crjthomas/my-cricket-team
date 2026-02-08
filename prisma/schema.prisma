@@ -8,6 +8,49 @@ datasource db {
 }
 
 // ============================================
+// AUTHENTICATION & USERS
+// ============================================
+
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Simple auth - username/password only (no personal data)
+  username     String   @unique
+  passwordHash String
+  
+  // Role-based access
+  role         UserRole @default(USER)
+  
+  // Session management
+  isActive     Boolean  @default(true)
+  lastLoginAt  DateTime?
+
+  sessions     Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  token     String   @unique
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+enum UserRole {
+  ADMIN   // Full access: AI selector, squad management, player management, settings
+  USER    // View only: team updates, gallery, match info, player profiles
+}
+
+// ============================================
 // PLAYER MANAGEMENT
 // ============================================
 

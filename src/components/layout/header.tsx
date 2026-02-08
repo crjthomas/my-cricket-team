@@ -1,9 +1,18 @@
 'use client'
 
-import { Bell, Search, Plus, MessageSquare } from 'lucide-react'
+import { Bell, Search, Plus, MessageSquare, Shield, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useAuth, usePermissions } from '@/lib/auth-context'
 
 export function Header() {
+  const { user, isAdmin } = useAuth()
+  const permissions = usePermissions()
+
+  // Get user initials
+  const initials = user?.username
+    ? user.username.slice(0, 2).toUpperCase()
+    : 'U'
+
   return (
     <header className="sticky top-0 z-40 h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-full items-center justify-between px-6">
@@ -24,33 +33,39 @@ export function Header() {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Quick Add</span>
-          </Button>
+          {permissions.canManagePlayers && (
+            <Button variant="outline" size="sm" className="gap-2">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Quick Add</span>
+            </Button>
+          )}
 
-          <Button variant="ghost" size="icon" className="relative">
-            <MessageSquare className="h-5 w-5" />
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-pitch-500 text-[10px] font-bold text-white">
-              AI
-            </span>
-          </Button>
+          {permissions.canUseAISelector && (
+            <Button variant="ghost" size="icon" className="relative">
+              <MessageSquare className="h-5 w-5" />
+              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-pitch-500 text-[10px] font-bold text-white">
+                AI
+              </span>
+            </Button>
+          )}
 
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-leather-500 text-[10px] font-bold text-white">
-              3
-            </span>
           </Button>
 
           {/* User avatar */}
           <div className="ml-2 flex items-center gap-3 pl-4 border-l">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium">Captain</p>
-              <p className="text-xs text-muted-foreground">Raj Kumar</p>
+              <p className="text-sm font-medium flex items-center gap-1">
+                {user?.username}
+                {isAdmin && <Shield className="h-3 w-3 text-amber-500" />}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {isAdmin ? 'Admin' : 'Team Member'}
+              </p>
             </div>
             <div className="h-9 w-9 rounded-full bg-gradient-to-br from-pitch-400 to-pitch-600 flex items-center justify-center text-white font-semibold text-sm shadow-md">
-              RK
+              {initials}
             </div>
           </div>
         </div>
