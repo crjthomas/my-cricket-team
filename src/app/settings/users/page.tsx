@@ -205,7 +205,7 @@ export default function UserManagementPage() {
                     type="text"
                     value={newUsername}
                     onChange={(e) => setNewUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                     placeholder="username"
                     required
                     minLength={3}
@@ -218,7 +218,7 @@ export default function UserManagementPage() {
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                     placeholder="password"
                     required
                     minLength={6}
@@ -229,7 +229,7 @@ export default function UserManagementPage() {
                   <select
                     value={newRole}
                     onChange={(e) => setNewRole(e.target.value as 'ADMIN' | 'USER')}
-                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                   >
                     <option value="USER">Viewer (View Only)</option>
                     <option value="ADMIN">Admin (Full Access)</option>

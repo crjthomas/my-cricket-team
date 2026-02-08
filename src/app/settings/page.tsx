@@ -97,7 +97,7 @@ function ChangePasswordForm() {
           type="password"
           value={currentPassword}
           onChange={(e) => setCurrentPassword(e.target.value)}
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
           required
         />
       </div>
@@ -108,7 +108,7 @@ function ChangePasswordForm() {
           type="password"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
           required
           minLength={6}
         />
@@ -120,7 +120,7 @@ function ChangePasswordForm() {
           type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
           required
         />
       </div>
@@ -205,7 +205,7 @@ function TeamProfileForm({ isAdmin }: { isAdmin: boolean }) {
               type="text"
               value={settings.teamName}
               onChange={(e) => setSettings({ ...settings, teamName: e.target.value })}
-              className="px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 w-64 text-right"
+              className="px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 w-64 text-right"
             />
           ) : (
             <span className="text-muted-foreground">{settings.teamName}</span>
@@ -219,7 +219,7 @@ function TeamProfileForm({ isAdmin }: { isAdmin: boolean }) {
               type="text"
               value={settings.captainName || ''}
               onChange={(e) => setSettings({ ...settings, captainName: e.target.value })}
-              className="px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 w-64 text-right"
+              className="px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 w-64 text-right"
               placeholder="Enter captain name"
             />
           ) : (
@@ -234,7 +234,7 @@ function TeamProfileForm({ isAdmin }: { isAdmin: boolean }) {
               type="text"
               value={settings.homeGround || ''}
               onChange={(e) => setSettings({ ...settings, homeGround: e.target.value })}
-              className="px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 w-64 text-right"
+              className="px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 w-64 text-right"
               placeholder="Enter home ground"
             />
           ) : (

@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { Sidebar } from './sidebar'
 import { Header } from './header'
+import { Flame } from 'lucide-react'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
@@ -12,9 +13,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-900 via-red-800 to-amber-900">
         <div className="text-center text-white">
-          <div className="text-6xl mb-4">🏏</div>
+          <div className="flex justify-center mb-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 shadow-lg shadow-orange-500/25">
+              <Flame className="h-12 w-12 text-white" />
+            </div>
+          </div>
           <p className="text-lg">Loading...</p>
         </div>
       </div>
@@ -32,9 +37,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       window.location.href = '/login'
     }
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-900 via-red-800 to-amber-900">
         <div className="text-center text-white">
-          <div className="text-6xl mb-4">🏏</div>
+          <div className="flex justify-center mb-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 shadow-lg shadow-orange-500/25">
+              <Flame className="h-12 w-12 text-white" />
+            </div>
+          </div>
           <p className="text-lg">Redirecting to login...</p>
         </div>
       </div>

@@ -18,6 +18,7 @@ import {
   Lock,
   LogOut,
   Shield,
+  Flame,
 } from 'lucide-react'
 
 export function Sidebar() {
@@ -51,8 +52,8 @@ export function Sidebar() {
     <div className="fixed inset-y-0 left-0 z-50 w-64 bg-midnight-950 text-white">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-6 border-b border-midnight-800">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-pitch-500 to-pitch-600 shadow-lg">
-          <span className="text-xl">🏏</span>
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-pitch-500 to-leather-500 shadow-lg shadow-pitch-500/25">
+          <Flame className="h-6 w-6 text-white" />
         </div>
         <div>
           <h1 className="font-bold text-lg tracking-tight">Phoenix Cricket</h1>

@@ -1,130 +1,213 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { MatchForm } from '@/components/forms/match-form'
+import { useAuth } from '@/lib/auth-context'
 import { 
   Calendar,
   Plus,
   MapPin,
-  Clock,
   ChevronRight,
   Trophy,
   Target,
-  Users
+  Users,
+  Loader2,
+  Edit,
+  Trash2
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn, formatDate, getImportanceColor, getMatchResultColor } from '@/lib/utils'
 
-const upcomingMatches = [
-  {
-    id: '1',
-    matchNumber: 7,
-    matchDate: '2026-02-08',
-    opponent: { name: 'Thunder Hawks', shortName: 'THK', strength: 8 },
-    venue: { name: 'Riverside Ground', city: 'Springfield' },
-    importance: 'MUST_WIN',
-    status: 'UPCOMING',
-    weather: 'OVERCAST',
-    availableCount: 14,
-    leaguePosition: 3,
-    matchesRemaining: 5,
-    captainNotes: 'Must win to stay in top 4 contention.',
-  },
-  {
-    id: '2',
-    matchNumber: 8,
-    matchDate: '2026-02-15',
-    opponent: { name: 'Royal Strikers', shortName: 'RST', strength: 7 },
-    venue: { name: 'Central Park Cricket Ground', city: 'Springfield' },
-    importance: 'IMPORTANT',
-    status: 'UPCOMING',
-    weather: null,
-    availableCount: null,
-    leaguePosition: null,
-    matchesRemaining: 4,
-    captainNotes: null,
-  },
-  {
-    id: '3',
-    matchNumber: 9,
-    matchDate: '2026-02-22',
-    opponent: { name: 'City Lions', shortName: 'CTL', strength: 6 },
-    venue: { name: 'Heritage Cricket Club', city: 'Oldtown' },
-    importance: 'REGULAR',
-    status: 'UPCOMING',
-    weather: null,
-    availableCount: null,
-    leaguePosition: null,
-    matchesRemaining: 3,
-    captainNotes: null,
-  },
-]
+interface Match {
+  id: string
+  matchNumber: number
+  matchDate: string
+  status: string
+  importance: string
+  result?: string
+  ourScore?: string
+  opponentScore?: string
+  marginOfVictory?: string
+  manOfMatch?: string
+  captainNotes?: string
+  opponent: {
+    id: string
+    name: string
+    shortName?: string
+    overallStrength: number
+  }
+  venue: {
+    id: string
+    name: string
+    city?: string
+  }
+  season: {
+    id: string
+    name: string
+  }
+}
 
-const pastMatches = [
-  {
-    id: '4',
-    matchNumber: 6,
-    matchDate: '2026-01-25',
-    opponent: { name: 'City Lions', shortName: 'CTL', strength: 6 },
-    venue: { name: 'Riverside Ground', city: 'Springfield' },
-    importance: 'REGULAR',
-    status: 'COMPLETED',
-    result: 'WON',
-    ourScore: '185/6 (20)',
-    opponentScore: '160/9 (20)',
-    marginOfVictory: '25 runs',
-    manOfMatch: 'Vikram Patel',
-  },
-  {
-    id: '5',
-    matchNumber: 5,
-    matchDate: '2026-01-18',
-    opponent: { name: 'Storm Riders', shortName: 'STR', strength: 9 },
-    venue: { name: 'Green Valley Oval', city: 'Greenville' },
-    importance: 'IMPORTANT',
-    status: 'COMPLETED',
-    result: 'LOST',
-    ourScore: '145/8 (20)',
-    opponentScore: '148/4 (18.2)',
-    marginOfVictory: '6 wickets',
-    manOfMatch: null,
-  },
-  {
-    id: '6',
-    matchNumber: 4,
-    matchDate: '2026-01-11',
-    opponent: { name: 'Thunder Hawks', shortName: 'THK', strength: 8 },
-    venue: { name: 'Central Park Cricket Ground', city: 'Springfield' },
-    importance: 'REGULAR',
-    status: 'COMPLETED',
-    result: 'WON',
-    ourScore: '172/5 (20)',
-    opponentScore: '165/7 (20)',
-    marginOfVictory: '7 runs',
-    manOfMatch: 'Raj Kumar',
-  },
-  {
-    id: '7',
-    matchNumber: 3,
-    matchDate: '2026-01-04',
-    opponent: { name: 'Royal Strikers', shortName: 'RST', strength: 7 },
-    venue: { name: 'Riverside Ground', city: 'Springfield' },
-    importance: 'REGULAR',
-    status: 'COMPLETED',
-    result: 'DRAW',
-    ourScore: '155/6 (20)',
-    opponentScore: '155/8 (20)',
-    marginOfVictory: null,
-    manOfMatch: null,
-  },
-]
+interface SeasonStats {
+  wins: number
+  losses: number
+  draws: number
+  remaining: number
+}
 
 type TabType = 'upcoming' | 'completed'
 
 export default function MatchesPage() {
+  const { isAdmin } = useAuth()
   const [activeTab, setActiveTab] = useState<TabType>('upcoming')
+  const [matches, setMatches] = useState<Match[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [stats, setStats] = useState<SeasonStats>({ wins: 0, losses: 0, draws: 0, remaining: 0 })
+
+  useEffect(() => {
+    fetchMatches()
+  }, [])
+
+  const fetchMatches = async () => {
+    try {
+      const res = await fetch('/api/graphql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            query {
+              matches {
+                id matchNumber matchDate status importance
+                result ourScore opponentScore marginOfVictory manOfMatch captainNotes
+                opponent { id name shortName overallStrength }
+                venue { id name city }
+                season { id name }
+              }
+              activeSeason {
+                wins losses draws totalMatches matchesPlayed
+              }
+            }
+          `,
+        }),
+      })
+      const { data } = await res.json()
+      setMatches(data?.matches || [])
+      if (data?.activeSeason) {
+        setStats({
+          wins: data.activeSeason.wins,
+          losses: data.activeSeason.losses,
+          draws: data.activeSeason.draws,
+          remaining: data.activeSeason.totalMatches - data.activeSeason.matchesPlayed,
+        })
+      }
+    } catch (error) {
+      console.error('Failed to fetch matches:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubmit = async (formData: {
+    matchDate: string
+    opponentId: string
+    venueId: string
+    seasonId: string
+    importance: string
+    captainNotes: string
+  }) => {
+    setSaving(true)
+    try {
+      await fetch('/api/graphql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            mutation CreateMatch(
+              $matchDate: DateTime!
+              $opponentId: String!
+              $venueId: String!
+              $seasonId: String!
+              $importance: MatchImportance
+              $captainNotes: String
+            ) {
+              createMatch(
+                matchDate: $matchDate
+                opponentId: $opponentId
+                venueId: $venueId
+                seasonId: $seasonId
+                importance: $importance
+                captainNotes: $captainNotes
+              ) {
+                id
+              }
+            }
+          `,
+          variables: {
+            matchDate: new Date(formData.matchDate).toISOString(),
+            opponentId: formData.opponentId,
+            venueId: formData.venueId,
+            seasonId: formData.seasonId,
+            importance: formData.importance,
+            captainNotes: formData.captainNotes || null,
+          },
+        }),
+      })
+      setShowForm(false)
+      fetchMatches()
+    } catch (error) {
+      console.error('Failed to create match:', error)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this match?')) return
+
+    try {
+      await fetch('/api/graphql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `mutation { deleteMatch(id: "${id}") }`,
+        }),
+      })
+      fetchMatches()
+    } catch (error) {
+      console.error('Failed to delete match:', error)
+    }
+  }
+
+  const upcomingMatches = matches.filter(m => m.status === 'UPCOMING' || m.status === 'IN_PROGRESS')
+  const completedMatches = matches.filter(m => m.status === 'COMPLETED')
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (showForm) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Schedule Match</h1>
+          <p className="text-muted-foreground mt-1">Add a new match to the calendar</p>
+        </div>
+        <MatchForm
+          onSubmit={handleSubmit}
+          onCancel={() => setShowForm(false)}
+          isLoading={saving}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -136,10 +219,12 @@ export default function MatchesPage() {
             Schedule and manage your team&apos;s fixtures
           </p>
         </div>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Match
-        </Button>
+        {isAdmin && (
+          <Button className="gap-2" onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4" />
+            Add Match
+          </Button>
+        )}
       </div>
 
       {/* Season Overview */}
@@ -150,7 +235,7 @@ export default function MatchesPage() {
               <Trophy className="h-5 w-5 text-pitch-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">4</p>
+              <p className="text-2xl font-bold">{stats.wins}</p>
               <p className="text-sm text-muted-foreground">Wins</p>
             </div>
           </CardContent>
@@ -161,7 +246,7 @@ export default function MatchesPage() {
               <Target className="h-5 w-5 text-leather-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">1</p>
+              <p className="text-2xl font-bold">{stats.losses}</p>
               <p className="text-sm text-muted-foreground">Losses</p>
             </div>
           </CardContent>
@@ -172,7 +257,7 @@ export default function MatchesPage() {
               <Users className="h-5 w-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">1</p>
+              <p className="text-2xl font-bold">{stats.draws}</p>
               <p className="text-sm text-muted-foreground">Draws</p>
             </div>
           </CardContent>
@@ -183,7 +268,7 @@ export default function MatchesPage() {
               <Calendar className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">6</p>
+              <p className="text-2xl font-bold">{stats.remaining}</p>
               <p className="text-sm text-muted-foreground">Remaining</p>
             </div>
           </CardContent>
@@ -212,174 +297,204 @@ export default function MatchesPage() {
               : 'border-transparent text-muted-foreground hover:text-foreground'
           )}
         >
-          Completed ({pastMatches.length})
+          Completed ({completedMatches.length})
         </button>
       </div>
 
       {/* Match List */}
       <div className="space-y-4">
-        {activeTab === 'upcoming' ? (
-          upcomingMatches.map((match, index) => (
-            <Card 
-              key={match.id} 
-              glow 
-              className={cn('stagger-' + ((index % 5) + 1), 'animate-slide-up')}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    {/* Match Number */}
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Match</p>
-                      <p className="text-2xl font-bold">#{match.matchNumber}</p>
-                    </div>
-                    
-                    {/* Opponent */}
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-midnight-700 to-midnight-900 text-white font-bold text-lg">
-                        {match.opponent.shortName}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-lg">vs {match.opponent.name}</p>
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(match.matchDate)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {match.venue.name}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+        {activeTab === 'upcoming' && upcomingMatches.length === 0 && (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Calendar className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Upcoming Matches</h3>
+              <p className="text-muted-foreground text-center mb-4">
+                Schedule matches to see them here
+              </p>
+              {isAdmin && (
+                <Button onClick={() => setShowForm(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Schedule Match
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {activeTab === 'upcoming' && upcomingMatches.map((match, index) => (
+          <Card 
+            key={match.id} 
+            glow 
+            className={cn('stagger-' + ((index % 5) + 1), 'animate-slide-up')}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-6">
+                  {/* Match Number */}
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">Match</p>
+                    <p className="text-2xl font-bold">#{match.matchNumber}</p>
                   </div>
-
-                  <div className="flex items-center gap-6">
-                    {/* Match Details */}
-                    <div className="flex gap-4">
-                      <Badge className={getImportanceColor(match.importance)}>
-                        {match.importance.replace('_', ' ')}
-                      </Badge>
-                      {match.weather && (
-                        <Badge variant="outline">{match.weather.replace('_', ' ')}</Badge>
-                      )}
+                  
+                  {/* Opponent */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-midnight-700 to-midnight-900 text-white font-bold text-lg">
+                      {match.opponent.shortName || match.opponent.name.slice(0, 3).toUpperCase()}
                     </div>
-
-                    {/* Availability */}
-                    {match.availableCount !== null ? (
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-pitch-600">{match.availableCount}</p>
-                        <p className="text-xs text-muted-foreground">Available</p>
+                    <div>
+                      <p className="font-semibold text-lg">vs {match.opponent.name}</p>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {formatDate(match.matchDate)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {match.venue.name}
+                        </span>
                       </div>
-                    ) : (
-                      <div className="text-center">
-                        <p className="text-sm text-muted-foreground">Pending</p>
-                        <p className="text-xs text-muted-foreground">Availability</p>
-                      </div>
-                    )}
-
-                    {/* Actions */}
-                    <div className="flex gap-2">
-                      <Link href={`/squad`}>
-                        <Button variant="outline" size="sm">
-                          Select Squad
-                        </Button>
-                      </Link>
-                      <Link href={`/matches/${match.id}`}>
-                        <Button variant="ghost" size="icon">
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
                     </div>
                   </div>
                 </div>
 
-                {match.captainNotes && (
-                  <div className="mt-4 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
-                    <span className="font-medium">Captain&apos;s Note:</span> {match.captainNotes}
+                <div className="flex items-center gap-6">
+                  {/* Match Details */}
+                  <div className="flex gap-4">
+                    <Badge className={getImportanceColor(match.importance)}>
+                      {match.importance.replace('_', ' ')}
+                    </Badge>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          pastMatches.map((match, index) => (
-            <Card 
-              key={match.id}
-              className={cn('stagger-' + ((index % 5) + 1), 'animate-slide-up')}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    {/* Match Number & Result */}
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Match</p>
-                      <p className="text-2xl font-bold">#{match.matchNumber}</p>
+
+                  {/* Opponent Strength */}
+                  <div className="text-center">
+                    <p className="text-2xl font-bold">{match.opponent.overallStrength}/10</p>
+                    <p className="text-xs text-muted-foreground">Strength</p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    <Link href={`/squad`}>
+                      <Button variant="outline" size="sm">
+                        Select Squad
+                      </Button>
+                    </Link>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => handleDelete(match.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {match.captainNotes && (
+                <div className="mt-4 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+                  <span className="font-medium">Captain&apos;s Note:</span> {match.captainNotes}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+
+        {activeTab === 'completed' && completedMatches.length === 0 && (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Trophy className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Completed Matches</h3>
+              <p className="text-muted-foreground text-center">
+                Match results will appear here once games are played
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {activeTab === 'completed' && completedMatches.map((match, index) => (
+          <Card 
+            key={match.id}
+            className={cn('stagger-' + ((index % 5) + 1), 'animate-slide-up')}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-6">
+                  {/* Match Number & Result */}
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">Match</p>
+                    <p className="text-2xl font-bold">#{match.matchNumber}</p>
+                    {match.result && (
                       <Badge className={cn('mt-1', getMatchResultColor(match.result))}>
                         {match.result}
                       </Badge>
+                    )}
+                  </div>
+                  
+                  {/* Opponent & Scores */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-midnight-700 to-midnight-900 text-white font-bold text-lg">
+                      {match.opponent.shortName || match.opponent.name.slice(0, 3).toUpperCase()}
                     </div>
-                    
-                    {/* Opponent & Scores */}
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-midnight-700 to-midnight-900 text-white font-bold text-lg">
-                        {match.opponent.shortName}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-lg">vs {match.opponent.name}</p>
+                    <div>
+                      <p className="font-semibold text-lg">vs {match.opponent.name}</p>
+                      {match.ourScore && (
                         <div className="flex items-center gap-3 text-sm">
                           <span className="font-medium">{match.ourScore}</span>
                           <span className="text-muted-foreground">vs</span>
                           <span className="text-muted-foreground">{match.opponentScore}</span>
                         </div>
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(match.matchDate)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {match.venue.name}
-                          </span>
-                        </div>
+                      )}
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {formatDate(match.matchDate)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {match.venue.name}
+                        </span>
                       </div>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-6">
-                    {/* Margin */}
-                    {match.marginOfVictory && (
-                      <div className="text-center">
-                        <p className="font-semibold">
-                          {match.result === 'WON' ? 'Won by' : 'Lost by'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">{match.marginOfVictory}</p>
-                      </div>
-                    )}
-
-                    {/* Man of Match */}
-                    {match.manOfMatch && (
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground">Man of Match</p>
-                        <p className="font-medium">{match.manOfMatch}</p>
-                      </div>
-                    )}
-
-                    {/* View Details */}
-                    <Link href={`/matches/${match.id}`}>
-                      <Button variant="ghost" size="icon">
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
+
+                <div className="flex items-center gap-6">
+                  {/* Margin */}
+                  {match.marginOfVictory && (
+                    <div className="text-center">
+                      <p className="font-semibold">
+                        {match.result === 'WON' ? 'Won by' : 'Lost by'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{match.marginOfVictory}</p>
+                    </div>
+                  )}
+
+                  {/* Man of Match */}
+                  {match.manOfMatch && (
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground">Man of Match</p>
+                      <p className="font-medium">{match.manOfMatch}</p>
+                    </div>
+                  )}
+
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => handleDelete(match.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   )
 }
-

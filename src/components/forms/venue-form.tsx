@@ -100,7 +100,7 @@ export function VenueForm({ venue, onSubmit, onCancel, isLoading }: VenueFormPro
                 type="text"
                 value={formData.name}
                 onChange={(e) => updateField('name', e.target.value)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 placeholder="e.g., Riverside Cricket Ground"
                 required
               />
@@ -111,7 +111,7 @@ export function VenueForm({ venue, onSubmit, onCancel, isLoading }: VenueFormPro
                 type="text"
                 value={formData.city}
                 onChange={(e) => updateField('city', e.target.value)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 placeholder="e.g., Portland"
               />
             </div>
@@ -123,7 +123,7 @@ export function VenueForm({ venue, onSubmit, onCancel, isLoading }: VenueFormPro
               type="text"
               value={formData.address}
               onChange={(e) => updateField('address', e.target.value)}
-              className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               placeholder="Full address"
             />
           </div>
@@ -134,7 +134,7 @@ export function VenueForm({ venue, onSubmit, onCancel, isLoading }: VenueFormPro
               type="url"
               value={formData.googleMapsUrl}
               onChange={(e) => updateField('googleMapsUrl', e.target.value)}
-              className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               placeholder="https://maps.google.com/..."
             />
           </div>
@@ -152,7 +152,7 @@ export function VenueForm({ venue, onSubmit, onCancel, isLoading }: VenueFormPro
               <select
                 value={formData.pitchType}
                 onChange={(e) => updateField('pitchType', e.target.value)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 {pitchTypes.map(type => (
                   <option key={type.value} value={type.value}>{type.label}</option>
@@ -164,7 +164,7 @@ export function VenueForm({ venue, onSubmit, onCancel, isLoading }: VenueFormPro
               <select
                 value={formData.boundarySize}
                 onChange={(e) => updateField('boundarySize', e.target.value)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 {boundarySizes.map(size => (
                   <option key={size.value} value={size.value}>{size.label}</option>
@@ -176,7 +176,7 @@ export function VenueForm({ venue, onSubmit, onCancel, isLoading }: VenueFormPro
               <select
                 value={formData.outfieldSpeed}
                 onChange={(e) => updateField('outfieldSpeed', e.target.value)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 {outfieldSpeeds.map(speed => (
                   <option key={speed.value} value={speed.value}>{speed.label}</option>
@@ -192,7 +192,7 @@ export function VenueForm({ venue, onSubmit, onCancel, isLoading }: VenueFormPro
                 type="text"
                 value={formData.typicalConditions}
                 onChange={(e) => updateField('typicalConditions', e.target.value)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 placeholder="e.g., Usually dry, favors spinners"
               />
             </div>
@@ -202,7 +202,7 @@ export function VenueForm({ venue, onSubmit, onCancel, isLoading }: VenueFormPro
                 type="number"
                 value={formData.averageFirstInningsScore || ''}
                 onChange={(e) => updateField('averageFirstInningsScore', e.target.value ? parseInt(e.target.value) : null)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 placeholder="e.g., 160"
               />
             </div>

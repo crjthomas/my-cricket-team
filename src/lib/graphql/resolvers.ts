@@ -477,6 +477,20 @@ export const resolvers = {
       })
     },
 
+    media: async () => {
+      return prisma.media.findMany({
+        include: {
+          match: {
+            include: {
+              opponent: true,
+            },
+          },
+          tags: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    },
+
     aiSquadRecommendation: async (_: unknown, { input }: { input: { matchId: string; mode: string; context?: Record<string, unknown> } }) => {
       const match = await prisma.match.findUnique({
         where: { id: input.matchId },
@@ -931,6 +945,222 @@ export const resolvers = {
 
     deleteOpponent: async (_: unknown, { id }: { id: string }) => {
       await prisma.opponent.delete({ where: { id } })
+      return true
+    },
+
+    updateOpponent: async (
+      _: unknown,
+      args: {
+        id: string
+        name?: string
+        shortName?: string
+        overallStrength?: number
+        battingStrength?: number
+        bowlingStrength?: number
+        keyPlayers?: string[]
+        notes?: string
+      }
+    ) => {
+      const { id, ...data } = args
+      const updateData: Record<string, unknown> = {}
+      if (data.name !== undefined) updateData.name = data.name
+      if (data.shortName !== undefined) updateData.shortName = data.shortName
+      if (data.overallStrength !== undefined) updateData.overallStrength = data.overallStrength
+      if (data.battingStrength !== undefined) updateData.battingStrength = data.battingStrength
+      if (data.bowlingStrength !== undefined) updateData.bowlingStrength = data.bowlingStrength
+      if (data.keyPlayers !== undefined) updateData.keyPlayers = data.keyPlayers
+      if (data.notes !== undefined) updateData.notes = data.notes
+
+      return prisma.opponent.update({
+        where: { id },
+        data: updateData,
+      })
+    },
+
+    updateVenue: async (
+      _: unknown,
+      args: {
+        id: string
+        name?: string
+        address?: string
+        city?: string
+        pitchType?: string
+        boundarySize?: string
+        outfieldSpeed?: string
+        typicalConditions?: string
+      }
+    ) => {
+      const { id, ...data } = args
+      const updateData: Record<string, unknown> = {}
+      if (data.name !== undefined) updateData.name = data.name
+      if (data.address !== undefined) updateData.address = data.address
+      if (data.city !== undefined) updateData.city = data.city
+      if (data.pitchType !== undefined) updateData.pitchType = data.pitchType
+      if (data.boundarySize !== undefined) updateData.boundarySize = data.boundarySize
+      if (data.outfieldSpeed !== undefined) updateData.outfieldSpeed = data.outfieldSpeed
+      if (data.typicalConditions !== undefined) updateData.typicalConditions = data.typicalConditions
+
+      return prisma.venue.update({
+        where: { id },
+        data: updateData,
+      })
+    },
+
+    createSeason: async (
+      _: unknown,
+      args: {
+        name: string
+        startDate: Date
+        endDate?: Date
+        description?: string
+        totalMatches?: number
+        totalTeams?: number
+        isActive?: boolean
+      }
+    ) => {
+      // If setting this season as active, deactivate others
+      if (args.isActive) {
+        await prisma.season.updateMany({
+          where: { isActive: true },
+          data: { isActive: false },
+        })
+      }
+
+      const season = await prisma.season.create({
+        data: {
+          name: args.name,
+          startDate: args.startDate,
+          endDate: args.endDate,
+          description: args.description,
+          totalMatches: args.totalMatches || 12,
+          totalTeams: args.totalTeams || 8,
+          isActive: args.isActive ?? true,
+        },
+      })
+
+      await prisma.activity.create({
+        data: {
+          type: 'SEASON_STARTED',
+          title: `New season created: ${season.name}`,
+          description: args.isActive ? 'This is now the active season' : undefined,
+          entityType: 'season',
+          entityId: season.id,
+        },
+      })
+
+      return season
+    },
+
+    updateSeason: async (
+      _: unknown,
+      args: {
+        id: string
+        name?: string
+        startDate?: Date
+        endDate?: Date
+        description?: string
+        totalMatches?: number
+        totalTeams?: number
+        isActive?: boolean
+        currentPosition?: number
+      }
+    ) => {
+      const { id, ...data } = args
+
+      // If setting this season as active, deactivate others
+      if (data.isActive) {
+        await prisma.season.updateMany({
+          where: { isActive: true, id: { not: id } },
+          data: { isActive: false },
+        })
+      }
+
+      const updateData: Record<string, unknown> = {}
+      if (data.name !== undefined) updateData.name = data.name
+      if (data.startDate !== undefined) updateData.startDate = data.startDate
+      if (data.endDate !== undefined) updateData.endDate = data.endDate
+      if (data.description !== undefined) updateData.description = data.description
+      if (data.totalMatches !== undefined) updateData.totalMatches = data.totalMatches
+      if (data.totalTeams !== undefined) updateData.totalTeams = data.totalTeams
+      if (data.isActive !== undefined) updateData.isActive = data.isActive
+      if (data.currentPosition !== undefined) updateData.currentPosition = data.currentPosition
+
+      return prisma.season.update({
+        where: { id },
+        data: updateData,
+      })
+    },
+
+    deleteSeason: async (_: unknown, { id }: { id: string }) => {
+      await prisma.season.delete({ where: { id } })
+      return true
+    },
+
+    deleteMatch: async (_: unknown, { id }: { id: string }) => {
+      await prisma.match.delete({ where: { id } })
+      return true
+    },
+
+    updateMatch: async (
+      _: unknown,
+      args: {
+        id: string
+        matchDate?: Date
+        importance?: string
+        captainNotes?: string
+        status?: string
+      }
+    ) => {
+      const { id, ...data } = args
+      const updateData: Record<string, unknown> = {}
+      if (data.matchDate !== undefined) updateData.matchDate = data.matchDate
+      if (data.importance !== undefined) updateData.importance = data.importance
+      if (data.captainNotes !== undefined) updateData.captainNotes = data.captainNotes
+      if (data.status !== undefined) updateData.status = data.status
+
+      return prisma.match.update({
+        where: { id },
+        data: updateData,
+        include: {
+          opponent: true,
+          venue: true,
+        },
+      })
+    },
+
+    createMedia: async (
+      _: unknown,
+      { input }: { input: { type: string; url: string; thumbnailUrl?: string; title?: string; description?: string; duration?: number; matchId?: string } }
+    ) => {
+      const media = await prisma.media.create({
+        data: {
+          type: input.type as 'PHOTO' | 'VIDEO' | 'DOCUMENT',
+          url: input.url,
+          thumbnailUrl: input.thumbnailUrl,
+          title: input.title,
+          description: input.description,
+          duration: input.duration,
+          matchId: input.matchId,
+        },
+        include: {
+          tags: true,
+        },
+      })
+
+      await prisma.activity.create({
+        data: {
+          type: 'MEDIA_UPLOADED',
+          title: input.title ? `Media uploaded: ${input.title}` : 'New media uploaded',
+          entityType: 'media',
+          entityId: media.id,
+        },
+      })
+
+      return media
+    },
+
+    deleteMedia: async (_: unknown, { id }: { id: string }) => {
+      await prisma.media.delete({ where: { id } })
       return true
     },
   },

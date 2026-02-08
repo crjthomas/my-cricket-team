@@ -1,17 +1,30 @@
 'use client'
 
-import { Bell, Search, Plus, MessageSquare, Shield, User } from 'lucide-react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Bell, Search, Plus, MessageSquare, Shield, User, X, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth, usePermissions } from '@/lib/auth-context'
+import Link from 'next/link'
 
 export function Header() {
+  const router = useRouter()
   const { user, isAdmin } = useAuth()
   const permissions = usePermissions()
+  const [showQuickAdd, setShowQuickAdd] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
 
   // Get user initials
   const initials = user?.username
     ? user.username.slice(0, 2).toUpperCase()
     : 'U'
+
+  const quickAddOptions = [
+    { label: 'Add Player', href: '/players/add', icon: '👤' },
+    { label: 'Add Opponent', href: '/opponents', icon: '⚔️' },
+    { label: 'Add Venue', href: '/venues', icon: '📍' },
+    { label: 'Add Season', href: '/season', icon: '📅' },
+  ]
 
   return (
     <header className="sticky top-0 z-40 h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -34,37 +47,92 @@ export function Header() {
         {/* Actions */}
         <div className="flex items-center gap-2">
           {permissions.canManagePlayers && (
-            <Button variant="outline" size="sm" className="gap-2">
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Quick Add</span>
-            </Button>
+            <div className="relative">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2"
+                onClick={() => setShowQuickAdd(!showQuickAdd)}
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Quick Add</span>
+              </Button>
+              
+              {showQuickAdd && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowQuickAdd(false)} />
+                  <div className="absolute right-0 mt-2 w-48 bg-background border rounded-lg shadow-lg z-50 py-1">
+                    {quickAddOptions.map((option) => (
+                      <Link 
+                        key={option.href} 
+                        href={option.href}
+                        onClick={() => setShowQuickAdd(false)}
+                        className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted transition-colors"
+                      >
+                        <span>{option.icon}</span>
+                        <span>{option.label}</span>
+                        <ChevronRight className="h-3 w-3 ml-auto text-muted-foreground" />
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           )}
 
           {permissions.canUseAISelector && (
-            <Button variant="ghost" size="icon" className="relative">
-              <MessageSquare className="h-5 w-5" />
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-pitch-500 text-[10px] font-bold text-white">
-                AI
-              </span>
-            </Button>
+            <Link href="/squad">
+              <Button variant="ghost" size="icon" className="relative">
+                <MessageSquare className="h-5 w-5" />
+                <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-pitch-500 text-[10px] font-bold text-white">
+                  AI
+                </span>
+              </Button>
+            </Link>
           )}
 
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-          </Button>
+          <div className="relative">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="relative"
+              onClick={() => setShowNotifications(!showNotifications)}
+            >
+              <Bell className="h-5 w-5" />
+            </Button>
+            
+            {showNotifications && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+                <div className="absolute right-0 mt-2 w-80 bg-background border rounded-lg shadow-lg z-50">
+                  <div className="flex items-center justify-between px-4 py-3 border-b">
+                    <h3 className="font-semibold">Notifications</h3>
+                    <button onClick={() => setShowNotifications(false)}>
+                      <X className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  </div>
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No new notifications</p>
+                    <p className="text-xs mt-1">Notifications will appear here when you have upcoming matches or availability requests.</p>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
           {/* User avatar */}
           <div className="ml-2 flex items-center gap-3 pl-4 border-l">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium flex items-center gap-1">
                 {user?.username}
-                {isAdmin && <Shield className="h-3 w-3 text-amber-500" />}
+                {isAdmin && <Shield className="h-3 w-3 text-pitch-500" />}
               </p>
               <p className="text-xs text-muted-foreground">
                 {isAdmin ? 'Admin' : 'Team Member'}
               </p>
             </div>
-            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-pitch-400 to-pitch-600 flex items-center justify-center text-white font-semibold text-sm shadow-md">
+            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-pitch-400 to-leather-500 flex items-center justify-center text-white font-semibold text-sm shadow-md shadow-pitch-500/25">
               {initials}
             </div>
           </div>

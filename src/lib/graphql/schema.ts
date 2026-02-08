@@ -326,6 +326,24 @@ export const typeDefs = gql`
     entityId: String
     createdAt: DateTime!
   }
+  
+  type Media {
+    id: ID!
+    type: String!
+    url: String!
+    thumbnailUrl: String
+    title: String
+    description: String
+    duration: Int
+    createdAt: DateTime!
+    match: Match
+    tags: [MediaTag!]!
+  }
+  
+  type MediaTag {
+    id: ID!
+    tag: String!
+  }
 
   # ============================================
   # AI TYPES
@@ -468,6 +486,16 @@ export const typeDefs = gql`
     battingOrder: [String!]!
     modificationReason: String
   }
+  
+  input MediaInput {
+    type: String!
+    url: String!
+    thumbnailUrl: String
+    title: String
+    description: String
+    duration: Int
+    matchId: String
+  }
 
   # ============================================
   # QUERIES
@@ -498,6 +526,9 @@ export const typeDefs = gql`
     
     # Squad
     squad(matchId: String!): Squad
+    
+    # Media
+    media: [Media!]!
     
     # Dashboard
     dashboardStats: DashboardStats!
@@ -569,6 +600,65 @@ export const typeDefs = gql`
     
     # Opponents
     deleteOpponent(id: ID!): Boolean!
+    updateOpponent(
+      id: ID!
+      name: String
+      shortName: String
+      overallStrength: Int
+      battingStrength: Int
+      bowlingStrength: Int
+      keyPlayers: [String!]
+      notes: String
+    ): Opponent!
+    
+    # Venues
+    updateVenue(
+      id: ID!
+      name: String
+      address: String
+      city: String
+      pitchType: String
+      boundarySize: String
+      outfieldSpeed: String
+      typicalConditions: String
+    ): Venue!
+    
+    # Seasons
+    createSeason(
+      name: String!
+      startDate: DateTime!
+      endDate: DateTime
+      description: String
+      totalMatches: Int
+      totalTeams: Int
+      isActive: Boolean
+    ): Season!
+    updateSeason(
+      id: ID!
+      name: String
+      startDate: DateTime
+      endDate: DateTime
+      description: String
+      totalMatches: Int
+      totalTeams: Int
+      isActive: Boolean
+      currentPosition: Int
+    ): Season!
+    deleteSeason(id: ID!): Boolean!
+    
+    # Matches
+    deleteMatch(id: ID!): Boolean!
+    updateMatch(
+      id: ID!
+      matchDate: DateTime
+      importance: MatchImportance
+      captainNotes: String
+      status: MatchStatus
+    ): Match!
+    
+    # Media
+    createMedia(input: MediaInput!): Media!
+    deleteMedia(id: ID!): Boolean!
   }
 `
 

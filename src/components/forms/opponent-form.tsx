@@ -93,7 +93,7 @@ export function OpponentForm({ opponent, onSubmit, onCancel, isLoading }: Oppone
                 type="text"
                 value={formData.name}
                 onChange={(e) => updateField('name', e.target.value)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 placeholder="e.g., Thunder Hawks"
                 required
               />
@@ -104,7 +104,7 @@ export function OpponentForm({ opponent, onSubmit, onCancel, isLoading }: Oppone
                 type="text"
                 value={formData.shortName}
                 onChange={(e) => updateField('shortName', e.target.value.toUpperCase().slice(0, 3))}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 placeholder="e.g., THK"
                 maxLength={3}
               />
@@ -117,7 +117,7 @@ export function OpponentForm({ opponent, onSubmit, onCancel, isLoading }: Oppone
               type="text"
               value={formData.playingStyle}
               onChange={(e) => updateField('playingStyle', e.target.value)}
-              className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               placeholder="e.g., Aggressive, pace-heavy bowling"
             />
           </div>
@@ -127,7 +127,7 @@ export function OpponentForm({ opponent, onSubmit, onCancel, isLoading }: Oppone
             <textarea
               value={formData.notes}
               onChange={(e) => updateField('notes', e.target.value)}
-              className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               placeholder="Any additional notes about the opponent..."
               rows={3}
             />
@@ -213,7 +213,7 @@ export function OpponentForm({ opponent, onSubmit, onCancel, isLoading }: Oppone
               type="text"
               value={newKeyPlayer}
               onChange={(e) => setNewKeyPlayer(e.target.value)}
-              className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               placeholder="e.g., John Smith (Fast bowler)"
               onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyPlayer())}
             />
