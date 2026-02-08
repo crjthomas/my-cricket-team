@@ -1,11 +1,25 @@
 import { PrismaClient } from '@prisma/client'
 
+// Check if we're in build mode (no DATABASE_URL or VERCEL_ENV=development during build)
+const isBuildTime = !process.env.DATABASE_URL || process.env.NEXT_PHASE === 'phase-production-build'
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// Lazy initialization using getter to avoid issues during Vercel build
+// Create a mock client for build time
+const mockPrismaClient = new Proxy({} as PrismaClient, {
+  get() {
+    return () => Promise.resolve(null)
+  }
+})
+
 function getPrismaClient(): PrismaClient {
+  // During build, return mock to avoid connection errors
+  if (isBuildTime) {
+    return mockPrismaClient
+  }
+  
   if (!globalForPrisma.prisma) {
     globalForPrisma.prisma = new PrismaClient({
       log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
@@ -14,14 +28,7 @@ function getPrismaClient(): PrismaClient {
   return globalForPrisma.prisma
 }
 
-// Export a proxy that lazily initializes Prisma
-export const prisma = new Proxy({} as PrismaClient, {
-  get(_, prop) {
-    const client = getPrismaClient()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (client as any)[prop]
-  }
-})
+export const prisma = getPrismaClient()
 
 export default prisma
 
