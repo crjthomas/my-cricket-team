@@ -1,8 +1,10 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/lib/auth-context'
 import { 
   Settings,
   User,
@@ -11,8 +13,112 @@ import {
   Database,
   Sparkles,
   Shield,
-  HelpCircle
+  HelpCircle,
+  Users,
+  Lock,
+  ChevronRight
 } from 'lucide-react'
+
+import { useState } from 'react'
+
+function ChangePasswordForm() {
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+
+    if (newPassword !== confirmPassword) {
+      setError('New passwords do not match')
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSuccess('Password changed successfully')
+        setCurrentPassword('')
+        setNewPassword('')
+        setConfirmPassword('')
+      } else {
+        setError(data.error || 'Failed to change password')
+      }
+    } catch {
+      setError('Network error')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
+      {error && (
+        <div className="p-3 bg-red-50 text-red-600 rounded-md text-sm">{error}</div>
+      )}
+      {success && (
+        <div className="p-3 bg-green-50 text-green-600 rounded-md text-sm">{success}</div>
+      )}
+      
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Current Password</label>
+        <input
+          type="password"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          required
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <label className="text-sm font-medium">New Password</label>
+        <input
+          type="password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          required
+          minLength={6}
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Confirm New Password</label>
+        <input
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          required
+        />
+      </div>
+      
+      <Button type="submit" disabled={isLoading}>
+        {isLoading ? 'Changing...' : 'Change Password'}
+      </Button>
+    </form>
+  )
+}
 
 const settingsSections = [
   {
@@ -59,6 +165,9 @@ const settingsSections = [
 ]
 
 export default function SettingsPage() {
+  const router = useRouter()
+  const { isAdmin, user } = useAuth()
+
   return (
     <div className="space-y-6 animate-fade-in max-w-4xl">
       {/* Header */}
@@ -71,6 +180,44 @@ export default function SettingsPage() {
           Manage your team settings and preferences
         </p>
       </div>
+
+      {/* User Management - Admin Only */}
+      {isAdmin && (
+        <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-amber-600" />
+              User Management
+              <Badge variant="outline" className="ml-2 text-amber-600 border-amber-300">Admin</Badge>
+            </CardTitle>
+            <CardDescription>Manage team members and their access permissions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => router.push('/settings/users')}
+              className="gap-2"
+            >
+              <Shield className="h-4 w-4" />
+              Manage Users
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Change Password */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Lock className="h-5 w-5" />
+            Security
+          </CardTitle>
+          <CardDescription>Manage your account security</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChangePasswordForm />
+        </CardContent>
+      </Card>
 
       {/* Settings Sections */}
       {settingsSections.map((section) => (

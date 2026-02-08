@@ -21,8 +21,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     )
   }
 
-  // Login page doesn't need shell
-  if (pathname === '/login') {
+  // Auth pages don't need shell
+  if (pathname === '/login' || pathname === '/register') {
     return <>{children}</>
   }
 

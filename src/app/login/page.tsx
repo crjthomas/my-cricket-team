@@ -88,8 +88,13 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-xs text-gray-500">
-            <p>Team members only. Contact your admin for access.</p>
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              New to the team?{' '}
+              <a href="/register" className="text-emerald-600 hover:text-emerald-700 font-medium">
+                Create an account
+              </a>
+            </p>
           </div>
         </CardContent>
       </Card>
