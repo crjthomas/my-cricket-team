@@ -145,10 +145,14 @@ export default function PlayersPage() {
             Manage your team roster and player profiles
           </p>
         </div>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Player
-        </Button>
+        {isAdmin && (
+          <Link href="/players/add">
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Player
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Stats Overview */}

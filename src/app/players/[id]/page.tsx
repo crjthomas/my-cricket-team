@@ -169,11 +169,40 @@ export default function PlayerDetailPage() {
         </div>
         {isAdmin && (
           <div className="flex gap-2">
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => router.push(`/players/${playerId}/edit`)}>
               <Edit className="h-4 w-4" />
               Edit
             </Button>
-            <Button variant="outline" className="gap-2 text-red-600 hover:text-red-700">
+            <Button 
+              variant="outline" 
+              className="gap-2 text-red-600 hover:text-red-700"
+              onClick={async () => {
+                if (confirm(`Are you sure you want to delete ${player.name}?`)) {
+                  try {
+                    const response = await fetch('/api/graphql', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        query: `
+                          mutation DeletePlayer($id: ID!) {
+                            deletePlayer(id: $id)
+                          }
+                        `,
+                        variables: { id: playerId }
+                      }),
+                    })
+                    const result = await response.json()
+                    if (result.errors) {
+                      alert(result.errors[0].message)
+                    } else {
+                      router.push('/players')
+                    }
+                  } catch (error) {
+                    alert('Failed to delete player')
+                  }
+                }
+              }}
+            >
               <Trash2 className="h-4 w-4" />
               Delete
             </Button>

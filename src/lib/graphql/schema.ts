@@ -565,6 +565,10 @@ export const typeDefs = gql`
       outfieldSpeed: String
       typicalConditions: String
     ): Venue!
+    deleteVenue(id: ID!): Boolean!
+    
+    # Opponents
+    deleteOpponent(id: ID!): Boolean!
   }
 `
 

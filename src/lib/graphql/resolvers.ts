@@ -923,6 +923,16 @@ export const resolvers = {
         },
       })
     },
+
+    deleteVenue: async (_: unknown, { id }: { id: string }) => {
+      await prisma.venue.delete({ where: { id } })
+      return true
+    },
+
+    deleteOpponent: async (_: unknown, { id }: { id: string }) => {
+      await prisma.opponent.delete({ where: { id } })
+      return true
+    },
   },
 }
 
