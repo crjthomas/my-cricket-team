@@ -8,6 +8,29 @@ datasource db {
 }
 
 // ============================================
+// TEAM SETTINGS
+// ============================================
+
+model TeamSettings {
+  id        String   @id @default("default")
+  updatedAt DateTime @updatedAt
+
+  teamName      String @default("My Cricket Team")
+  captainName   String?
+  homeGround    String?
+  teamLogo      String?
+  primaryColor  String @default("#10b981") // emerald-500
+  
+  // Notifications
+  matchReminders        Boolean @default(true)
+  availabilityRequests  Boolean @default(true)
+  squadAnnouncements    Boolean @default(true)
+  performanceUpdates    Boolean @default(false)
+
+  @@map("team_settings")
+}
+
+// ============================================
 // AUTHENTICATION & USERS
 // ============================================
 

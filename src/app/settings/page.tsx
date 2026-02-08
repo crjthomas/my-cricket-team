@@ -16,10 +16,22 @@ import {
   HelpCircle,
   Users,
   Lock,
-  ChevronRight
+  ChevronRight,
+  Save,
+  Loader2
 } from 'lucide-react'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+interface TeamSettings {
+  teamName: string
+  captainName: string | null
+  homeGround: string | null
+  matchReminders: boolean
+  availabilityRequests: boolean
+  squadAnnouncements: boolean
+  performanceUpdates: boolean
+}
 
 function ChangePasswordForm() {
   const [currentPassword, setCurrentPassword] = useState('')
@@ -120,49 +132,200 @@ function ChangePasswordForm() {
   )
 }
 
-const settingsSections = [
-  {
-    title: 'Profile',
-    description: 'Manage your account and team details',
-    icon: User,
-    items: [
-      { label: 'Team Name', value: 'My Cricket Team', type: 'text' },
-      { label: 'Captain', value: 'Raj Kumar', type: 'text' },
-      { label: 'Home Ground', value: 'Riverside Ground', type: 'text' },
-    ],
-  },
-  {
-    title: 'Notifications',
-    description: 'Configure alerts and reminders',
-    icon: Bell,
-    items: [
-      { label: 'Match Reminders', value: true, type: 'toggle' },
-      { label: 'Availability Requests', value: true, type: 'toggle' },
-      { label: 'Squad Announcements', value: true, type: 'toggle' },
-      { label: 'Performance Updates', value: false, type: 'toggle' },
-    ],
-  },
-  {
-    title: 'Appearance',
-    description: 'Customize the look and feel',
-    icon: Palette,
-    items: [
-      { label: 'Theme', value: 'System', type: 'select', options: ['Light', 'Dark', 'System'] },
-      { label: 'Accent Color', value: 'Green', type: 'color' },
-    ],
-  },
-  {
-    title: 'AI Settings',
-    description: 'Configure AI and MCP features',
-    icon: Sparkles,
-    items: [
-      { label: 'AI Squad Suggestions', value: true, type: 'toggle' },
-      { label: 'Auto Insights', value: true, type: 'toggle' },
-      { label: 'Training Recommendations', value: true, type: 'toggle' },
-      { label: 'API Provider', value: 'Anthropic Claude', type: 'text' },
-    ],
-  },
-]
+function TeamProfileForm({ isAdmin }: { isAdmin: boolean }) {
+  const [settings, setSettings] = useState<TeamSettings | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  useEffect(() => {
+    fetchSettings()
+  }, [])
+
+  const fetchSettings = async () => {
+    try {
+      const response = await fetch('/api/team-settings')
+      if (response.ok) {
+        const data = await response.json()
+        setSettings(data)
+      }
+    } catch {
+      setError('Failed to load settings')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSave = async () => {
+    if (!settings) return
+    setError('')
+    setSuccess('')
+    setIsSaving(true)
+
+    try {
+      const response = await fetch('/api/team-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      })
+
+      if (response.ok) {
+        setSuccess('Settings saved successfully')
+        setTimeout(() => setSuccess(''), 3000)
+      } else {
+        const data = await response.json()
+        setError(data.error || 'Failed to save settings')
+      }
+    } catch {
+      setError('Network error')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return <div className="text-muted-foreground">Loading settings...</div>
+  }
+
+  if (!settings) {
+    return <div className="text-red-500">Failed to load settings</div>
+  }
+
+  return (
+    <div className="space-y-4">
+      {error && <div className="p-3 bg-red-50 text-red-600 rounded-md text-sm">{error}</div>}
+      {success && <div className="p-3 bg-green-50 text-green-600 rounded-md text-sm">{success}</div>}
+      
+      <div className="space-y-4">
+        <div className="flex items-center justify-between py-3 border-b">
+          <label className="font-medium">Team Name</label>
+          {isAdmin ? (
+            <input
+              type="text"
+              value={settings.teamName}
+              onChange={(e) => setSettings({ ...settings, teamName: e.target.value })}
+              className="px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 w-64 text-right"
+            />
+          ) : (
+            <span className="text-muted-foreground">{settings.teamName}</span>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between py-3 border-b">
+          <label className="font-medium">Captain</label>
+          {isAdmin ? (
+            <input
+              type="text"
+              value={settings.captainName || ''}
+              onChange={(e) => setSettings({ ...settings, captainName: e.target.value })}
+              className="px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 w-64 text-right"
+              placeholder="Enter captain name"
+            />
+          ) : (
+            <span className="text-muted-foreground">{settings.captainName || 'Not set'}</span>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between py-3 border-b">
+          <label className="font-medium">Home Ground</label>
+          {isAdmin ? (
+            <input
+              type="text"
+              value={settings.homeGround || ''}
+              onChange={(e) => setSettings({ ...settings, homeGround: e.target.value })}
+              className="px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 w-64 text-right"
+              placeholder="Enter home ground"
+            />
+          ) : (
+            <span className="text-muted-foreground">{settings.homeGround || 'Not set'}</span>
+          )}
+        </div>
+      </div>
+
+      {isAdmin && (
+        <div className="pt-4">
+          <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function NotificationSettings({ isAdmin }: { isAdmin: boolean }) {
+  const [settings, setSettings] = useState<TeamSettings | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    fetchSettings()
+  }, [])
+
+  const fetchSettings = async () => {
+    try {
+      const response = await fetch('/api/team-settings')
+      if (response.ok) {
+        const data = await response.json()
+        setSettings(data)
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleToggle = async (field: keyof TeamSettings) => {
+    if (!settings || !isAdmin) return
+    
+    const newSettings = { ...settings, [field]: !settings[field] }
+    setSettings(newSettings)
+    setIsSaving(true)
+
+    try {
+      await fetch('/api/team-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: newSettings[field] }),
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading || !settings) {
+    return <div className="text-muted-foreground">Loading...</div>
+  }
+
+  const toggleItems = [
+    { key: 'matchReminders' as const, label: 'Match Reminders' },
+    { key: 'availabilityRequests' as const, label: 'Availability Requests' },
+    { key: 'squadAnnouncements' as const, label: 'Squad Announcements' },
+    { key: 'performanceUpdates' as const, label: 'Performance Updates' },
+  ]
+
+  return (
+    <div className="space-y-4">
+      {toggleItems.map((item) => (
+        <div key={item.key} className="flex items-center justify-between py-3 border-b last:border-0">
+          <p className="font-medium">{item.label}</p>
+          <button
+            onClick={() => handleToggle(item.key)}
+            disabled={!isAdmin || isSaving}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              settings[item.key] ? 'bg-pitch-600' : 'bg-muted'
+            } ${!isAdmin ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              settings[item.key] ? 'translate-x-6' : 'translate-x-1'
+            }`} />
+          </button>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -219,57 +382,100 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Settings Sections */}
-      {settingsSections.map((section) => (
-        <Card key={section.title}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <section.icon className="h-5 w-5" />
-              {section.title}
-            </CardTitle>
-            <CardDescription>{section.description}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {section.items.map((item, index) => (
-              <div 
-                key={index}
-                className="flex items-center justify-between py-3 border-b last:border-0"
-              >
-                <div>
-                  <p className="font-medium">{item.label}</p>
-                </div>
-                <div>
-                  {item.type === 'toggle' && (
-                    <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${item.value ? 'bg-pitch-600' : 'bg-muted'}`}>
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${item.value ? 'translate-x-6' : 'translate-x-1'}`} />
-                    </div>
-                  )}
-                  {item.type === 'text' && (
-                    <span className="text-muted-foreground">{item.value}</span>
-                  )}
-                  {item.type === 'select' && 'options' in item && (
-                    <select className="bg-muted rounded-md px-3 py-1 text-sm" defaultValue={item.value as string}>
-                      {item.options?.map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  )}
-                  {item.type === 'color' && (
-                    <div className="flex gap-2">
-                      {['bg-pitch-500', 'bg-blue-500', 'bg-purple-500', 'bg-leather-500', 'bg-stumps-500'].map((color) => (
-                        <div 
-                          key={color}
-                          className={`h-6 w-6 rounded-full ${color} cursor-pointer ring-2 ring-offset-2 ${color === 'bg-pitch-500' ? 'ring-primary' : 'ring-transparent'}`}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      ))}
+      {/* Team Profile */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Profile
+          </CardTitle>
+          <CardDescription>Manage your team details</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TeamProfileForm isAdmin={isAdmin} />
+        </CardContent>
+      </Card>
+
+      {/* Notifications */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notifications
+          </CardTitle>
+          <CardDescription>Configure alerts and reminders</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <NotificationSettings isAdmin={isAdmin} />
+        </CardContent>
+      </Card>
+
+      {/* Appearance */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5" />
+            Appearance
+          </CardTitle>
+          <CardDescription>Customize the look and feel</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between py-3 border-b">
+            <p className="font-medium">Theme</p>
+            <select className="bg-muted rounded-md px-3 py-1 text-sm" defaultValue="System">
+              <option value="Light">Light</option>
+              <option value="Dark">Dark</option>
+              <option value="System">System</option>
+            </select>
+          </div>
+          <div className="flex items-center justify-between py-3">
+            <p className="font-medium">Accent Color</p>
+            <div className="flex gap-2">
+              {['bg-pitch-500', 'bg-blue-500', 'bg-purple-500', 'bg-leather-500', 'bg-stumps-500'].map((color) => (
+                <div 
+                  key={color}
+                  className={`h-6 w-6 rounded-full ${color} cursor-pointer ring-2 ring-offset-2 ${color === 'bg-pitch-500' ? 'ring-primary' : 'ring-transparent'}`}
+                />
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* AI Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5" />
+            AI Settings
+          </CardTitle>
+          <CardDescription>Configure AI and MCP features</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between py-3 border-b">
+            <p className="font-medium">AI Squad Suggestions</p>
+            <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-pitch-600">
+              <span className="inline-block h-4 w-4 transform rounded-full bg-white translate-x-6" />
+            </div>
+          </div>
+          <div className="flex items-center justify-between py-3 border-b">
+            <p className="font-medium">Auto Insights</p>
+            <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-pitch-600">
+              <span className="inline-block h-4 w-4 transform rounded-full bg-white translate-x-6" />
+            </div>
+          </div>
+          <div className="flex items-center justify-between py-3 border-b">
+            <p className="font-medium">Training Recommendations</p>
+            <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-pitch-600">
+              <span className="inline-block h-4 w-4 transform rounded-full bg-white translate-x-6" />
+            </div>
+          </div>
+          <div className="flex items-center justify-between py-3">
+            <p className="font-medium">API Provider</p>
+            <span className="text-muted-foreground">Anthropic Claude</span>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Database & Export */}
       <Card>

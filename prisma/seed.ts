@@ -25,6 +25,7 @@ async function main() {
   await prisma.activity.deleteMany({})
   await prisma.session.deleteMany({})
   await prisma.user.deleteMany({})
+  await prisma.teamSettings.deleteMany({})
 
   console.log('✅ All existing data cleaned')
 
@@ -57,6 +58,18 @@ async function main() {
   })
 
   console.log('✅ Created viewer user (username: viewer, password: viewer123)')
+
+  // Create default team settings
+  await prisma.teamSettings.create({
+    data: {
+      id: 'default',
+      teamName: 'Phoenix Cricket',
+      captainName: null,
+      homeGround: null,
+    },
+  })
+
+  console.log('✅ Created default team settings')
 
   // Create initial activity
   await prisma.activity.create({
