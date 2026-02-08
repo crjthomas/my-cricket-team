@@ -15,10 +15,32 @@ interface PlayerData {
   battingStyle: string
   bowlingStyle: string
   battingPosition: string
+  // Core Skills
   battingSkill: number
   bowlingSkill: number
   fieldingSkill: number
   experienceLevel: number
+  // Extended Skills
+  powerHitting: number
+  runningBetweenWickets: number
+  pressureHandling: number
+  // Physical & Fitness
+  fitnessLevel: number
+  currentInjuryStatus: string
+  // Detailed Skills
+  preferredFieldingPositions: string[]
+  bowlingVariations: string[]
+  // Commitment
+  reliabilityScore: number
+  trainingAttendance: number | null
+  // Career History
+  previousTeams: string[]
+  injuryHistory: string[]
+  // Experience Background
+  isRookie: boolean
+  tennisBallBackground: boolean
+  yearsPlaying: number | null
+  // Team Status
   captainChoice: number
   isWicketkeeper: boolean
   isCaptain: boolean
@@ -60,6 +82,20 @@ export default function EditPlayerPage() {
                 bowlingSkill
                 fieldingSkill
                 experienceLevel
+                powerHitting
+                runningBetweenWickets
+                pressureHandling
+                fitnessLevel
+                currentInjuryStatus
+                preferredFieldingPositions
+                bowlingVariations
+                reliabilityScore
+                trainingAttendance
+                previousTeams
+                injuryHistory
+                isRookie
+                tennisBallBackground
+                yearsPlaying
                 captainChoice
                 isWicketkeeper
                 isCaptain
@@ -106,7 +142,7 @@ export default function EditPlayerPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <h1 className="text-2xl font-bold">Player Not Found</h1>
-        <p className="text-muted-foreground">The player you're trying to edit doesn't exist.</p>
+        <p className="text-muted-foreground">The player you&apos;re trying to edit doesn&apos;t exist.</p>
         <Button onClick={() => router.push('/players')} className="gap-2">
           <ArrowLeft className="h-4 w-4" />
           Back to Players
@@ -115,23 +151,7 @@ export default function EditPlayerPage() {
     )
   }
 
-  const handleSubmit = async (data: {
-    name: string
-    jerseyNumber: number | null
-    primaryRole: string
-    battingStyle: string
-    bowlingStyle: string
-    battingPosition: string
-    battingSkill: number
-    bowlingSkill: number
-    fieldingSkill: number
-    experienceLevel: number
-    captainChoice: number
-    isWicketkeeper: boolean
-    isCaptain: boolean
-    isViceCaptain: boolean
-    isActive: boolean
-  }) => {
+  const handleSubmit = async (data: PlayerData) => {
     setIsSaving(true)
     try {
       const response = await fetch('/api/graphql', {
@@ -159,6 +179,20 @@ export default function EditPlayerPage() {
               bowlingSkill: data.bowlingSkill,
               fieldingSkill: data.fieldingSkill,
               experienceLevel: data.experienceLevel,
+              powerHitting: data.powerHitting,
+              runningBetweenWickets: data.runningBetweenWickets,
+              pressureHandling: data.pressureHandling,
+              fitnessLevel: data.fitnessLevel,
+              currentInjuryStatus: data.currentInjuryStatus,
+              preferredFieldingPositions: data.preferredFieldingPositions,
+              bowlingVariations: data.bowlingVariations,
+              reliabilityScore: data.reliabilityScore,
+              trainingAttendance: data.trainingAttendance,
+              previousTeams: data.previousTeams,
+              injuryHistory: data.injuryHistory,
+              isRookie: data.isRookie,
+              tennisBallBackground: data.tennisBallBackground,
+              yearsPlaying: data.yearsPlaying,
               captainChoice: data.captainChoice,
               isWicketkeeper: data.isWicketkeeper,
               isActive: data.isActive,
@@ -188,7 +222,7 @@ export default function EditPlayerPage() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Edit Player</h1>
-          <p className="text-muted-foreground">Update {player.name}'s profile</p>
+          <p className="text-muted-foreground">Update {player.name}&apos;s profile</p>
         </div>
       </div>
 
