@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,135 +14,36 @@ import {
   MoreVertical,
   Star,
   TrendingUp,
-  Users
+  Users,
+  Loader2
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn, getRoleColor, getFormColor } from '@/lib/utils'
+import { useAuth } from '@/lib/auth-context'
 
-// Mock data - would come from GraphQL in production
-const players = [
-  {
-    id: '1',
-    name: 'Raj Kumar',
-    jerseyNumber: 7,
-    primaryRole: 'BATSMAN',
-    battingStyle: 'RIGHT_HAND',
-    bowlingStyle: 'MEDIUM',
-    battingPosition: 'TOP_ORDER',
-    battingSkill: 9,
-    bowlingSkill: 4,
-    fieldingSkill: 8,
-    captainChoice: 1,
-    isCaptain: true,
-    currentForm: 'EXCELLENT',
-    matchesPlayed: 6,
-    matchesAvailable: 6,
-    runsScored: 285,
-    wicketsTaken: 0,
-    catches: 4,
-  },
-  {
-    id: '2',
-    name: 'Amit Singh',
-    jerseyNumber: 11,
-    primaryRole: 'ALL_ROUNDER',
-    battingStyle: 'LEFT_HAND',
-    bowlingStyle: 'SPIN_OFF',
-    battingPosition: 'MIDDLE_ORDER',
-    battingSkill: 7,
-    bowlingSkill: 8,
-    fieldingSkill: 7,
-    captainChoice: 1,
-    isCaptain: false,
-    currentForm: 'GOOD',
-    matchesPlayed: 5,
-    matchesAvailable: 6,
-    runsScored: 145,
-    wicketsTaken: 8,
-    catches: 3,
-  },
-  {
-    id: '3',
-    name: 'Vikram Patel',
-    jerseyNumber: 45,
-    primaryRole: 'BOWLER',
-    battingStyle: 'RIGHT_HAND',
-    bowlingStyle: 'FAST',
-    battingPosition: 'LOWER_ORDER',
-    battingSkill: 3,
-    bowlingSkill: 9,
-    fieldingSkill: 6,
-    captainChoice: 1,
-    isCaptain: false,
-    currentForm: 'EXCELLENT',
-    matchesPlayed: 6,
-    matchesAvailable: 6,
-    runsScored: 15,
-    wicketsTaken: 12,
-    catches: 2,
-  },
-  {
-    id: '4',
-    name: 'Suresh Menon',
-    jerseyNumber: 1,
-    primaryRole: 'WICKETKEEPER',
-    battingStyle: 'RIGHT_HAND',
-    bowlingStyle: 'NONE',
-    battingPosition: 'MIDDLE_ORDER',
-    battingSkill: 7,
-    bowlingSkill: 1,
-    fieldingSkill: 9,
-    captainChoice: 1,
-    isCaptain: false,
-    isWicketkeeper: true,
-    currentForm: 'GOOD',
-    matchesPlayed: 6,
-    matchesAvailable: 6,
-    runsScored: 168,
-    wicketsTaken: 0,
-    catches: 8,
-  },
-  {
-    id: '5',
-    name: 'Karthik Nair',
-    jerseyNumber: 23,
-    primaryRole: 'BATSMAN',
-    battingStyle: 'RIGHT_HAND',
-    bowlingStyle: 'MEDIUM',
-    battingPosition: 'OPENER',
-    battingSkill: 8,
-    bowlingSkill: 3,
-    fieldingSkill: 7,
-    captainChoice: 2,
-    isCaptain: false,
-    currentForm: 'AVERAGE',
-    matchesPlayed: 2,
-    matchesAvailable: 6,
-    runsScored: 35,
-    wicketsTaken: 0,
-    catches: 1,
-  },
-  {
-    id: '6',
-    name: 'Pradeep Iyer',
-    jerseyNumber: 18,
-    primaryRole: 'BATSMAN',
-    battingStyle: 'LEFT_HAND',
-    bowlingStyle: 'SPIN_LEG',
-    battingPosition: 'OPENER',
-    battingSkill: 8,
-    bowlingSkill: 4,
-    fieldingSkill: 6,
-    captainChoice: 1,
-    isCaptain: false,
-    currentForm: 'EXCELLENT',
-    matchesPlayed: 5,
-    matchesAvailable: 6,
-    runsScored: 198,
-    wicketsTaken: 1,
-    catches: 2,
-  },
-]
+interface Player {
+  id: string
+  name: string
+  jerseyNumber: number | null
+  primaryRole: string
+  battingStyle: string
+  bowlingStyle: string
+  battingPosition: string
+  battingSkill: number
+  bowlingSkill: number
+  fieldingSkill: number
+  captainChoice: number
+  isCaptain: boolean
+  isWicketkeeper?: boolean
+  currentSeasonStats?: {
+    matchesPlayed: number
+    matchesAvailable: number
+    runsScored: number
+    wicketsTaken: number
+    catches: number
+    currentForm: string
+  } | null
+}
 
 const roleFilters = ['ALL', 'BATSMAN', 'BOWLER', 'ALL_ROUNDER', 'WICKETKEEPER']
 
@@ -150,6 +51,67 @@ export default function PlayersPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('ALL')
   const [sortBy, setSortBy] = useState<'name' | 'runs' | 'wickets' | 'form'>('name')
+  const [players, setPlayers] = useState<Player[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const { isAdmin } = useAuth()
+
+  useEffect(() => {
+    fetchPlayers()
+  }, [])
+
+  const fetchPlayers = async () => {
+    try {
+      const response = await fetch('/api/graphql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            query GetPlayers {
+              players(activeOnly: true) {
+                id
+                name
+                jerseyNumber
+                primaryRole
+                battingStyle
+                bowlingStyle
+                battingPosition
+                battingSkill
+                bowlingSkill
+                fieldingSkill
+                captainChoice
+                isCaptain
+                isWicketkeeper
+                currentSeasonStats {
+                  matchesPlayed
+                  matchesAvailable
+                  runsScored
+                  wicketsTaken
+                  catches
+                  currentForm
+                }
+              }
+            }
+          `
+        }),
+      })
+
+      const { data } = await response.json()
+      setPlayers(data?.players || [])
+    } catch (error) {
+      console.error('Failed to fetch players:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const getStats = (player: Player) => player.currentSeasonStats || {
+    matchesPlayed: 0,
+    matchesAvailable: 0,
+    runsScored: 0,
+    wicketsTaken: 0,
+    catches: 0,
+    currentForm: 'AVERAGE',
+  }
 
   const filteredPlayers = players
     .filter(player => {
@@ -158,14 +120,16 @@ export default function PlayersPage() {
       return matchesSearch && matchesRole
     })
     .sort((a, b) => {
+      const statsA = getStats(a)
+      const statsB = getStats(b)
       switch (sortBy) {
         case 'runs':
-          return b.runsScored - a.runsScored
+          return statsB.runsScored - statsA.runsScored
         case 'wickets':
-          return b.wicketsTaken - a.wicketsTaken
+          return statsB.wicketsTaken - statsA.wicketsTaken
         case 'form':
           const formOrder = { EXCELLENT: 0, GOOD: 1, AVERAGE: 2, POOR: 3 }
-          return formOrder[a.currentForm as keyof typeof formOrder] - formOrder[b.currentForm as keyof typeof formOrder]
+          return formOrder[statsA.currentForm as keyof typeof formOrder] - formOrder[statsB.currentForm as keyof typeof formOrder]
         default:
           return a.name.localeCompare(b.name)
       }
@@ -207,7 +171,7 @@ export default function PlayersPage() {
             </div>
             <div>
               <p className="text-2xl font-bold">
-                {players.filter(p => p.currentForm === 'EXCELLENT').length}
+                {players.filter(p => getStats(p).currentForm === 'EXCELLENT').length}
               </p>
               <p className="text-sm text-muted-foreground">In Excellent Form</p>
             </div>
@@ -233,7 +197,10 @@ export default function PlayersPage() {
             </div>
             <div>
               <p className="text-2xl font-bold">
-                {players.filter(p => p.matchesPlayed / p.matchesAvailable < 0.5).length}
+                {players.filter(p => {
+                  const stats = getStats(p)
+                  return stats.matchesAvailable > 0 && stats.matchesPlayed / stats.matchesAvailable < 0.5
+                }).length}
               </p>
               <p className="text-sm text-muted-foreground">Need More Games</p>
             </div>
@@ -276,6 +243,27 @@ export default function PlayersPage() {
       </Card>
 
       {/* Players Grid */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : players.length === 0 ? (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Players Yet</h3>
+            <p className="text-muted-foreground mb-4">
+              Get started by adding your first player to the team.
+            </p>
+            {isAdmin && (
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add First Player
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredPlayers.map((player, index) => (
           <Link href={`/players/${player.id}`} key={player.id}>
@@ -311,68 +299,76 @@ export default function PlayersPage() {
                   </Button>
                 </div>
 
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <Badge className={getRoleColor(player.primaryRole)}>
-                    {player.primaryRole.replace('_', ' ')}
-                  </Badge>
-                  <Badge className={getFormColor(player.currentForm)}>
-                    {player.currentForm}
-                  </Badge>
-                  {player.captainChoice === 1 && (
-                    <Badge variant="outline" className="gap-1">
-                      <Star className="h-3 w-3" /> 1st Choice
-                    </Badge>
-                  )}
-                </div>
+                {(() => {
+                  const stats = getStats(player)
+                  return (
+                    <>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        <Badge className={getRoleColor(player.primaryRole)}>
+                          {player.primaryRole.replace('_', ' ')}
+                        </Badge>
+                        <Badge className={getFormColor(stats.currentForm)}>
+                          {stats.currentForm}
+                        </Badge>
+                        {player.captainChoice === 1 && (
+                          <Badge variant="outline" className="gap-1">
+                            <Star className="h-3 w-3" /> 1st Choice
+                          </Badge>
+                        )}
+                      </div>
 
-                {/* Skills */}
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between text-xs">
-                    <span>Batting</span>
-                    <span className="font-medium">{player.battingSkill}/10</span>
-                  </div>
-                  <Progress value={player.battingSkill * 10} className="h-1.5" />
-                  
-                  <div className="flex items-center justify-between text-xs">
-                    <span>Bowling</span>
-                    <span className="font-medium">{player.bowlingSkill}/10</span>
-                  </div>
-                  <Progress 
-                    value={player.bowlingSkill * 10} 
-                    className="h-1.5" 
-                    indicatorClassName="bg-leather-500"
-                  />
-                </div>
+                      {/* Skills */}
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center justify-between text-xs">
+                          <span>Batting</span>
+                          <span className="font-medium">{player.battingSkill}/10</span>
+                        </div>
+                        <Progress value={player.battingSkill * 10} className="h-1.5" />
+                        
+                        <div className="flex items-center justify-between text-xs">
+                          <span>Bowling</span>
+                          <span className="font-medium">{player.bowlingSkill}/10</span>
+                        </div>
+                        <Progress 
+                          value={player.bowlingSkill * 10} 
+                          className="h-1.5" 
+                          indicatorClassName="bg-leather-500"
+                        />
+                      </div>
 
-                {/* Season Stats */}
-                <div className="grid grid-cols-3 gap-2 pt-4 border-t">
-                  <div className="text-center">
-                    <p className="text-lg font-bold">{player.runsScored}</p>
-                    <p className="text-xs text-muted-foreground">Runs</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-lg font-bold">{player.wicketsTaken}</p>
-                    <p className="text-xs text-muted-foreground">Wickets</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-lg font-bold">{player.matchesPlayed}/{player.matchesAvailable}</p>
-                    <p className="text-xs text-muted-foreground">Played</p>
-                  </div>
-                </div>
+                      {/* Season Stats */}
+                      <div className="grid grid-cols-3 gap-2 pt-4 border-t">
+                        <div className="text-center">
+                          <p className="text-lg font-bold">{stats.runsScored}</p>
+                          <p className="text-xs text-muted-foreground">Runs</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold">{stats.wicketsTaken}</p>
+                          <p className="text-xs text-muted-foreground">Wickets</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold">{stats.matchesPlayed}/{stats.matchesAvailable}</p>
+                          <p className="text-xs text-muted-foreground">Played</p>
+                        </div>
+                      </div>
 
-                {/* Opportunity Indicator */}
-                {player.matchesPlayed / player.matchesAvailable < 0.5 && (
-                  <div className="mt-4 p-2 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800">
-                    <p className="text-xs text-amber-700 dark:text-amber-300 flex items-center gap-1">
-                      ⚠️ Only played {Math.round(player.matchesPlayed / player.matchesAvailable * 100)}% of available matches
-                    </p>
-                  </div>
-                )}
+                      {/* Opportunity Indicator */}
+                      {stats.matchesAvailable > 0 && stats.matchesPlayed / stats.matchesAvailable < 0.5 && (
+                        <div className="mt-4 p-2 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800">
+                          <p className="text-xs text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                            ⚠️ Only played {Math.round(stats.matchesPlayed / stats.matchesAvailable * 100)}% of available matches
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
               </CardContent>
             </Card>
           </Link>
         ))}
       </div>
+      )}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -15,16 +16,16 @@ import {
   Trophy,
   Target,
   Activity,
-  Calendar
+  Calendar,
+  Loader2
 } from 'lucide-react'
-import { cn, getRoleColor, getFormColor } from '@/lib/utils'
+import { getRoleColor, getFormColor } from '@/lib/utils'
 import { useAuth } from '@/lib/auth-context'
 
-// Mock data - would come from GraphQL in production
-const playersData: Record<string, {
+interface PlayerData {
   id: string
   name: string
-  jerseyNumber: number
+  jerseyNumber: number | null
   primaryRole: string
   battingStyle: string
   bowlingStyle: string
@@ -35,177 +36,21 @@ const playersData: Record<string, {
   experienceLevel: number
   captainChoice: number
   isCaptain: boolean
-  isViceCaptain?: boolean
-  isWicketkeeper?: boolean
-  currentForm: string
-  matchesPlayed: number
-  matchesAvailable: number
-  runsScored: number
-  wicketsTaken: number
-  catches: number
-  highestScore: number
-  bestBowling: string
-  average: number
-  strikeRate: number
-  economy: number
-}> = {
-  '1': {
-    id: '1',
-    name: 'Raj Kumar',
-    jerseyNumber: 7,
-    primaryRole: 'BATSMAN',
-    battingStyle: 'RIGHT_HAND',
-    bowlingStyle: 'MEDIUM',
-    battingPosition: 'TOP_ORDER',
-    battingSkill: 9,
-    bowlingSkill: 4,
-    fieldingSkill: 8,
-    experienceLevel: 9,
-    captainChoice: 1,
-    isCaptain: true,
-    currentForm: 'EXCELLENT',
-    matchesPlayed: 6,
-    matchesAvailable: 6,
-    runsScored: 285,
-    wicketsTaken: 0,
-    catches: 4,
-    highestScore: 78,
-    bestBowling: '-',
-    average: 47.5,
-    strikeRate: 135.2,
-    economy: 0,
-  },
-  '2': {
-    id: '2',
-    name: 'Amit Singh',
-    jerseyNumber: 11,
-    primaryRole: 'ALL_ROUNDER',
-    battingStyle: 'LEFT_HAND',
-    bowlingStyle: 'SPIN_OFF',
-    battingPosition: 'MIDDLE_ORDER',
-    battingSkill: 7,
-    bowlingSkill: 8,
-    fieldingSkill: 7,
-    experienceLevel: 7,
-    captainChoice: 1,
-    isCaptain: false,
-    currentForm: 'GOOD',
-    matchesPlayed: 5,
-    matchesAvailable: 6,
-    runsScored: 145,
-    wicketsTaken: 8,
-    catches: 3,
-    highestScore: 45,
-    bestBowling: '3/22',
-    average: 29.0,
-    strikeRate: 118.5,
-    economy: 6.8,
-  },
-  '3': {
-    id: '3',
-    name: 'Vikram Patel',
-    jerseyNumber: 45,
-    primaryRole: 'BOWLER',
-    battingStyle: 'RIGHT_HAND',
-    bowlingStyle: 'FAST',
-    battingPosition: 'LOWER_ORDER',
-    battingSkill: 3,
-    bowlingSkill: 9,
-    fieldingSkill: 6,
-    experienceLevel: 8,
-    captainChoice: 1,
-    isCaptain: false,
-    currentForm: 'EXCELLENT',
-    matchesPlayed: 6,
-    matchesAvailable: 6,
-    runsScored: 15,
-    wicketsTaken: 12,
-    catches: 2,
-    highestScore: 8,
-    bestBowling: '4/18',
-    average: 5.0,
-    strikeRate: 75.0,
-    economy: 5.2,
-  },
-  '4': {
-    id: '4',
-    name: 'Suresh Menon',
-    jerseyNumber: 1,
-    primaryRole: 'WICKETKEEPER',
-    battingStyle: 'RIGHT_HAND',
-    bowlingStyle: 'NONE',
-    battingPosition: 'MIDDLE_ORDER',
-    battingSkill: 7,
-    bowlingSkill: 1,
-    fieldingSkill: 9,
-    experienceLevel: 8,
-    captainChoice: 1,
-    isCaptain: false,
-    isWicketkeeper: true,
-    currentForm: 'GOOD',
-    matchesPlayed: 6,
-    matchesAvailable: 6,
-    runsScored: 168,
-    wicketsTaken: 0,
-    catches: 8,
-    highestScore: 52,
-    bestBowling: '-',
-    average: 33.6,
-    strikeRate: 122.3,
-    economy: 0,
-  },
-  '5': {
-    id: '5',
-    name: 'Karthik Nair',
-    jerseyNumber: 23,
-    primaryRole: 'BATSMAN',
-    battingStyle: 'RIGHT_HAND',
-    bowlingStyle: 'MEDIUM',
-    battingPosition: 'OPENER',
-    battingSkill: 8,
-    bowlingSkill: 3,
-    fieldingSkill: 7,
-    experienceLevel: 6,
-    captainChoice: 2,
-    isCaptain: false,
-    currentForm: 'AVERAGE',
-    matchesPlayed: 2,
-    matchesAvailable: 6,
-    runsScored: 35,
-    wicketsTaken: 0,
-    catches: 1,
-    highestScore: 22,
-    bestBowling: '-',
-    average: 17.5,
-    strikeRate: 95.0,
-    economy: 0,
-  },
-  '6': {
-    id: '6',
-    name: 'Pradeep Iyer',
-    jerseyNumber: 18,
-    primaryRole: 'BATSMAN',
-    battingStyle: 'LEFT_HAND',
-    bowlingStyle: 'SPIN_LEG',
-    battingPosition: 'OPENER',
-    battingSkill: 8,
-    bowlingSkill: 4,
-    fieldingSkill: 6,
-    experienceLevel: 7,
-    captainChoice: 1,
-    isCaptain: false,
-    currentForm: 'EXCELLENT',
-    matchesPlayed: 5,
-    matchesAvailable: 6,
-    runsScored: 198,
-    wicketsTaken: 1,
-    catches: 2,
-    highestScore: 65,
-    bestBowling: '1/12',
-    average: 39.6,
-    strikeRate: 142.1,
-    economy: 8.5,
-  },
+  isViceCaptain: boolean
+  isWicketkeeper: boolean
+  currentSeasonStats?: {
+    matchesPlayed: number
+    matchesAvailable: number
+    runsScored: number
+    wicketsTaken: number
+    catches: number
+    highestScore: number
+    bestBowling: string | null
+    currentForm: string
+    battingAverage: number | null
+    strikeRate: number | null
+    economyRate: number | null
+  } | null
 }
 
 export default function PlayerDetailPage() {
@@ -214,7 +59,73 @@ export default function PlayerDetailPage() {
   const { isAdmin } = useAuth()
   const playerId = params.id as string
   
-  const player = playersData[playerId]
+  const [player, setPlayer] = useState<PlayerData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    fetchPlayer()
+  }, [playerId])
+
+  const fetchPlayer = async () => {
+    try {
+      const response = await fetch('/api/graphql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            query GetPlayer($id: ID!) {
+              player(id: $id) {
+                id
+                name
+                jerseyNumber
+                primaryRole
+                battingStyle
+                bowlingStyle
+                battingPosition
+                battingSkill
+                bowlingSkill
+                fieldingSkill
+                experienceLevel
+                captainChoice
+                isCaptain
+                isViceCaptain
+                isWicketkeeper
+                currentSeasonStats {
+                  matchesPlayed
+                  matchesAvailable
+                  runsScored
+                  wicketsTaken
+                  catches
+                  highestScore
+                  bestBowling
+                  currentForm
+                  battingAverage
+                  strikeRate
+                  economyRate
+                }
+              }
+            }
+          `,
+          variables: { id: playerId }
+        }),
+      })
+
+      const { data } = await response.json()
+      setPlayer(data?.player || null)
+    } catch (error) {
+      console.error('Failed to fetch player:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   if (!player) {
     return (
@@ -227,6 +138,20 @@ export default function PlayerDetailPage() {
         </Button>
       </div>
     )
+  }
+
+  const stats = player.currentSeasonStats || {
+    matchesPlayed: 0,
+    matchesAvailable: 0,
+    runsScored: 0,
+    wicketsTaken: 0,
+    catches: 0,
+    highestScore: 0,
+    bestBowling: null,
+    currentForm: 'AVERAGE',
+    battingAverage: null,
+    strikeRate: null,
+    economyRate: null,
   }
 
   return (
@@ -271,8 +196,8 @@ export default function PlayerDetailPage() {
                 <Badge className={getRoleColor(player.primaryRole)}>
                   {player.primaryRole.replace('_', ' ')}
                 </Badge>
-                <Badge className={getFormColor(player.currentForm)}>
-                  {player.currentForm}
+                <Badge className={getFormColor(stats.currentForm)}>
+                  {stats.currentForm}
                 </Badge>
                 {player.isCaptain && (
                   <Badge variant="warning">Captain</Badge>
@@ -336,19 +261,19 @@ export default function PlayerDetailPage() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <p className="text-3xl font-bold text-pitch-600">{player.matchesPlayed}</p>
+                <p className="text-3xl font-bold text-pitch-600">{stats.matchesPlayed}</p>
                 <p className="text-sm text-muted-foreground">Matches Played</p>
               </div>
               <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <p className="text-3xl font-bold">{player.runsScored}</p>
+                <p className="text-3xl font-bold">{stats.runsScored}</p>
                 <p className="text-sm text-muted-foreground">Runs Scored</p>
               </div>
               <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <p className="text-3xl font-bold">{player.wicketsTaken}</p>
+                <p className="text-3xl font-bold">{stats.wicketsTaken}</p>
                 <p className="text-sm text-muted-foreground">Wickets</p>
               </div>
               <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <p className="text-3xl font-bold">{player.catches}</p>
+                <p className="text-3xl font-bold">{stats.catches}</p>
                 <p className="text-sm text-muted-foreground">Catches</p>
               </div>
             </div>
@@ -361,7 +286,7 @@ export default function PlayerDetailPage() {
                       <Target className="h-4 w-4 text-pitch-600" />
                     </div>
                     <div>
-                      <p className="text-xl font-bold">{player.highestScore}</p>
+                      <p className="text-xl font-bold">{stats.highestScore}</p>
                       <p className="text-xs text-muted-foreground">Highest Score</p>
                     </div>
                   </div>
@@ -374,7 +299,7 @@ export default function PlayerDetailPage() {
                       <Activity className="h-4 w-4 text-leather-600" />
                     </div>
                     <div>
-                      <p className="text-xl font-bold">{player.bestBowling}</p>
+                      <p className="text-xl font-bold">{stats.bestBowling || '-'}</p>
                       <p className="text-xs text-muted-foreground">Best Bowling</p>
                     </div>
                   </div>
@@ -387,7 +312,7 @@ export default function PlayerDetailPage() {
                       <TrendingUp className="h-4 w-4 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-xl font-bold">{player.average.toFixed(1)}</p>
+                      <p className="text-xl font-bold">{stats.battingAverage?.toFixed(1) || '-'}</p>
                       <p className="text-xs text-muted-foreground">Batting Avg</p>
                     </div>
                   </div>
@@ -397,15 +322,15 @@ export default function PlayerDetailPage() {
 
             <div className="grid grid-cols-3 gap-4 mt-4">
               <div className="text-center p-3 border rounded-lg">
-                <p className="text-lg font-semibold">{player.strikeRate.toFixed(1)}</p>
+                <p className="text-lg font-semibold">{stats.strikeRate?.toFixed(1) || '-'}</p>
                 <p className="text-xs text-muted-foreground">Strike Rate</p>
               </div>
               <div className="text-center p-3 border rounded-lg">
-                <p className="text-lg font-semibold">{player.economy > 0 ? player.economy.toFixed(1) : '-'}</p>
+                <p className="text-lg font-semibold">{stats.economyRate && stats.economyRate > 0 ? stats.economyRate.toFixed(1) : '-'}</p>
                 <p className="text-xs text-muted-foreground">Economy</p>
               </div>
               <div className="text-center p-3 border rounded-lg">
-                <p className="text-lg font-semibold">{Math.round(player.matchesPlayed / player.matchesAvailable * 100)}%</p>
+                <p className="text-lg font-semibold">{stats.matchesAvailable > 0 ? Math.round(stats.matchesPlayed / stats.matchesAvailable * 100) : 0}%</p>
                 <p className="text-xs text-muted-foreground">Availability</p>
               </div>
             </div>
