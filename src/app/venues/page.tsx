@@ -171,7 +171,18 @@ export default function VenuesPage() {
           </div>
         </div>
         <VenueForm
-          venue={editingVenue || undefined}
+          venue={editingVenue ? {
+            id: editingVenue.id,
+            name: editingVenue.name,
+            address: editingVenue.address || '',
+            city: editingVenue.city || '',
+            googleMapsUrl: editingVenue.googleMapsUrl || '',
+            pitchType: editingVenue.pitchType,
+            boundarySize: editingVenue.boundarySize,
+            outfieldSpeed: editingVenue.outfieldSpeed,
+            typicalConditions: editingVenue.typicalConditions || '',
+            averageFirstInningsScore: editingVenue.averageFirstInningsScore,
+          } : undefined}
           onSubmit={handleSubmit}
           onCancel={() => { setShowForm(false); setEditingVenue(null) }}
           isLoading={isSaving}

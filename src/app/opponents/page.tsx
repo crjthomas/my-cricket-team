@@ -170,7 +170,18 @@ export default function OpponentsPage() {
           </div>
         </div>
         <OpponentForm
-          opponent={editingOpponent || undefined}
+          opponent={editingOpponent ? {
+            id: editingOpponent.id,
+            name: editingOpponent.name,
+            shortName: editingOpponent.shortName || '',
+            overallStrength: editingOpponent.overallStrength,
+            battingStrength: editingOpponent.battingStrength,
+            bowlingStrength: editingOpponent.bowlingStrength,
+            fieldingStrength: editingOpponent.fieldingStrength,
+            keyPlayers: editingOpponent.keyPlayers,
+            playingStyle: editingOpponent.playingStyle || '',
+            notes: editingOpponent.notes || '',
+          } : undefined}
           onSubmit={handleSubmit}
           onCancel={() => { setShowForm(false); setEditingOpponent(null) }}
           isLoading={isSaving}
