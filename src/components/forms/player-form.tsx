@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Save, X } from 'lucide-react'
+import { Loader2, Save, X, Plus, Trash2 } from 'lucide-react'
 
 interface PlayerFormData {
   name: string
@@ -13,10 +13,28 @@ interface PlayerFormData {
   battingStyle: string
   bowlingStyle: string
   battingPosition: string
+  // Core Skills
   battingSkill: number
   bowlingSkill: number
   fieldingSkill: number
   experienceLevel: number
+  // Extended Skills
+  powerHitting: number
+  runningBetweenWickets: number
+  pressureHandling: number
+  // Physical & Fitness
+  fitnessLevel: number
+  currentInjuryStatus: string
+  // Detailed Skills
+  preferredFieldingPositions: string[]
+  bowlingVariations: string[]
+  // Availability & Commitment
+  reliabilityScore: number
+  trainingAttendance: number | null
+  // Career History
+  previousTeams: string[]
+  injuryHistory: string[]
+  // Team Status
   captainChoice: number
   isWicketkeeper: boolean
   isCaptain: boolean
@@ -42,6 +60,17 @@ const defaultFormData: PlayerFormData = {
   bowlingSkill: 5,
   fieldingSkill: 5,
   experienceLevel: 5,
+  powerHitting: 5,
+  runningBetweenWickets: 5,
+  pressureHandling: 5,
+  fitnessLevel: 5,
+  currentInjuryStatus: 'FIT',
+  preferredFieldingPositions: [],
+  bowlingVariations: [],
+  reliabilityScore: 5,
+  trainingAttendance: null,
+  previousTeams: [],
+  injuryHistory: [],
   captainChoice: 2,
   isWicketkeeper: false,
   isCaptain: false,
@@ -85,27 +114,33 @@ const captainChoices = [
   { value: 3, label: '3rd Choice' },
 ]
 
+const injuryStatuses = [
+  { value: 'FIT', label: 'Fit' },
+  { value: 'MINOR_NIGGLE', label: 'Minor Niggle' },
+  { value: 'RECOVERING', label: 'Recovering' },
+  { value: 'INJURED', label: 'Injured' },
+]
+
+const fieldingPositionOptions = [
+  'Slip', 'Gully', 'Point', 'Cover', 'Mid-off', 'Mid-on',
+  'Mid-wicket', 'Square Leg', 'Fine Leg', 'Third Man',
+  'Long-on', 'Long-off', 'Deep Mid-wicket', 'Deep Square Leg',
+  'Wicketkeeper', 'Boundary Rider'
+]
+
+const bowlingVariationOptions = [
+  'Yorker', 'Bouncer', 'Slower Ball', 'Cutter', 'Reverse Swing',
+  'Googly', 'Doosra', 'Carrom Ball', 'Arm Ball', 'Slider',
+  'Top Spinner', 'Flipper', 'Leg Cutter', 'Off Cutter'
+]
+
 export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerFormProps) {
   const [formData, setFormData] = useState<PlayerFormData>(
-    player ? {
-      name: player.name,
-      jerseyNumber: player.jerseyNumber,
-      primaryRole: player.primaryRole,
-      battingStyle: player.battingStyle,
-      bowlingStyle: player.bowlingStyle,
-      battingPosition: player.battingPosition,
-      battingSkill: player.battingSkill,
-      bowlingSkill: player.bowlingSkill,
-      fieldingSkill: player.fieldingSkill,
-      experienceLevel: player.experienceLevel,
-      captainChoice: player.captainChoice,
-      isWicketkeeper: player.isWicketkeeper,
-      isCaptain: player.isCaptain,
-      isViceCaptain: player.isViceCaptain,
-      isActive: player.isActive,
-    } : defaultFormData
+    player ? { ...defaultFormData, ...player } : defaultFormData
   )
   const [error, setError] = useState('')
+  const [newPreviousTeam, setNewPreviousTeam] = useState('')
+  const [newInjury, setNewInjury] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -125,6 +160,26 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
 
   const updateField = <K extends keyof PlayerFormData>(field: K, value: PlayerFormData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const toggleArrayItem = (field: 'preferredFieldingPositions' | 'bowlingVariations', item: string) => {
+    const current = formData[field]
+    if (current.includes(item)) {
+      updateField(field, current.filter(i => i !== item))
+    } else {
+      updateField(field, [...current, item])
+    }
+  }
+
+  const addToArray = (field: 'previousTeams' | 'injuryHistory', value: string, setValue: (v: string) => void) => {
+    if (value.trim()) {
+      updateField(field, [...formData[field], value.trim()])
+      setValue('')
+    }
+  }
+
+  const removeFromArray = (field: 'previousTeams' | 'injuryHistory', index: number) => {
+    updateField(field, formData[field].filter((_, i) => i !== index))
   }
 
   return (
@@ -280,11 +335,11 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
         </CardContent>
       </Card>
 
-      {/* Skills */}
+      {/* Core Skills */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Skills (1-10)</CardTitle>
-          <CardDescription>Rate the player's skills</CardDescription>
+          <CardTitle className="text-lg">Core Skills (1-10)</CardTitle>
+          <CardDescription>Rate the player&apos;s fundamental abilities</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -345,6 +400,265 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Extended Skills */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Extended Skills (1-10)</CardTitle>
+          <CardDescription>Additional performance attributes</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium flex justify-between">
+                <span>Power Hitting</span>
+                <Badge variant="outline">{formData.powerHitting}</Badge>
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={formData.powerHitting}
+                onChange={(e) => updateField('powerHitting', parseInt(e.target.value))}
+                className="mt-2 w-full"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium flex justify-between">
+                <span>Running B/W Wickets</span>
+                <Badge variant="outline">{formData.runningBetweenWickets}</Badge>
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={formData.runningBetweenWickets}
+                onChange={(e) => updateField('runningBetweenWickets', parseInt(e.target.value))}
+                className="mt-2 w-full"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium flex justify-between">
+                <span>Pressure Handling</span>
+                <Badge variant="outline">{formData.pressureHandling}</Badge>
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={formData.pressureHandling}
+                onChange={(e) => updateField('pressureHandling', parseInt(e.target.value))}
+                className="mt-2 w-full"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Physical & Fitness */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Physical & Fitness</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium flex justify-between">
+                <span>Fitness Level</span>
+                <Badge variant="outline">{formData.fitnessLevel}</Badge>
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={formData.fitnessLevel}
+                onChange={(e) => updateField('fitnessLevel', parseInt(e.target.value))}
+                className="mt-2 w-full"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Injury Status</label>
+              <select
+                value={formData.currentInjuryStatus}
+                onChange={(e) => updateField('currentInjuryStatus', e.target.value)}
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                {injuryStatuses.map(status => (
+                  <option key={status.value} value={status.value}>{status.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Commitment & Reliability */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Commitment & Reliability</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium flex justify-between">
+                <span>Reliability Score</span>
+                <Badge variant="outline">{formData.reliabilityScore}</Badge>
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={formData.reliabilityScore}
+                onChange={(e) => updateField('reliabilityScore', parseInt(e.target.value))}
+                className="mt-2 w-full"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Shows up when selected</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Training Attendance (%)</label>
+              <input
+                type="number"
+                value={formData.trainingAttendance || ''}
+                onChange={(e) => updateField('trainingAttendance', e.target.value ? parseInt(e.target.value) : null)}
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                placeholder="e.g., 85"
+                min="0"
+                max="100"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Preferred Fielding Positions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Preferred Fielding Positions</CardTitle>
+          <CardDescription>Select all positions where the player excels</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {fieldingPositionOptions.map(position => (
+              <Badge
+                key={position}
+                variant={formData.preferredFieldingPositions.includes(position) ? 'default' : 'outline'}
+                className="cursor-pointer hover:bg-orange-100"
+                onClick={() => toggleArrayItem('preferredFieldingPositions', position)}
+              >
+                {position}
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bowling Variations */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Bowling Variations</CardTitle>
+          <CardDescription>Select all variations the bowler can deliver</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {bowlingVariationOptions.map(variation => (
+              <Badge
+                key={variation}
+                variant={formData.bowlingVariations.includes(variation) ? 'default' : 'outline'}
+                className="cursor-pointer hover:bg-orange-100"
+                onClick={() => toggleArrayItem('bowlingVariations', variation)}
+              >
+                {variation}
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Previous Teams */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Previous Teams</CardTitle>
+          <CardDescription>Clubs or teams the player has previously played for</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newPreviousTeam}
+              onChange={(e) => setNewPreviousTeam(e.target.value)}
+              className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              placeholder="e.g., Melbourne Stars CC"
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('previousTeams', newPreviousTeam, setNewPreviousTeam))}
+            />
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={() => addToArray('previousTeams', newPreviousTeam, setNewPreviousTeam)}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          {formData.previousTeams.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {formData.previousTeams.map((team, index) => (
+                <Badge key={index} variant="secondary" className="gap-1 pr-1">
+                  {team}
+                  <button
+                    type="button"
+                    onClick={() => removeFromArray('previousTeams', index)}
+                    className="ml-1 hover:text-red-500"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Injury History */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Injury History</CardTitle>
+          <CardDescription>Past injuries for workload management</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newInjury}
+              onChange={(e) => setNewInjury(e.target.value)}
+              className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              placeholder="e.g., Hamstring strain - Jan 2025"
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('injuryHistory', newInjury, setNewInjury))}
+            />
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={() => addToArray('injuryHistory', newInjury, setNewInjury)}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          {formData.injuryHistory.length > 0 && (
+            <div className="space-y-2">
+              {formData.injuryHistory.map((injury, index) => (
+                <div key={index} className="flex items-center justify-between p-2 bg-red-50 rounded-md">
+                  <span className="text-sm">{injury}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFromArray('injuryHistory', index)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

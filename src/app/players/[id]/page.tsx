@@ -17,7 +17,12 @@ import {
   Target,
   Activity,
   Calendar,
-  Loader2
+  Loader2,
+  Heart,
+  Zap,
+  Users,
+  AlertCircle,
+  CheckCircle
 } from 'lucide-react'
 import { getRoleColor, getFormColor } from '@/lib/utils'
 import { useAuth } from '@/lib/auth-context'
@@ -30,14 +35,33 @@ interface PlayerData {
   battingStyle: string
   bowlingStyle: string
   battingPosition: string
+  // Core Skills
   battingSkill: number
   bowlingSkill: number
   fieldingSkill: number
   experienceLevel: number
+  // Extended Skills
+  powerHitting: number
+  runningBetweenWickets: number
+  pressureHandling: number
+  // Physical & Fitness
+  fitnessLevel: number
+  currentInjuryStatus: string
+  // Detailed Skills
+  preferredFieldingPositions: string[]
+  bowlingVariations: string[]
+  // Commitment
+  reliabilityScore: number
+  trainingAttendance: number | null
+  // Career History
+  previousTeams: string[]
+  injuryHistory: string[]
+  // Team Status
   captainChoice: number
   isCaptain: boolean
   isViceCaptain: boolean
   isWicketkeeper: boolean
+  isActive: boolean
   currentSeasonStats?: {
     matchesPlayed: number
     matchesAvailable: number
@@ -86,10 +110,22 @@ export default function PlayerDetailPage() {
                 bowlingSkill
                 fieldingSkill
                 experienceLevel
+                powerHitting
+                runningBetweenWickets
+                pressureHandling
+                fitnessLevel
+                currentInjuryStatus
+                preferredFieldingPositions
+                bowlingVariations
+                reliabilityScore
+                trainingAttendance
+                previousTeams
+                injuryHistory
                 captainChoice
                 isCaptain
                 isViceCaptain
                 isWicketkeeper
+                isActive
                 currentSeasonStats {
                   matchesPlayed
                   matchesAvailable
@@ -274,6 +310,60 @@ export default function PlayerDetailPage() {
                   <Progress value={player.experienceLevel * 10} className="h-2" indicatorClassName="bg-blue-500" />
                 </div>
               </div>
+
+              {/* Extended Skills */}
+              <div className="w-full pt-4 border-t space-y-3">
+                <h4 className="text-sm font-semibold text-muted-foreground">Extended Skills</h4>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Power Hitting</span>
+                    <span className="font-medium">{player.powerHitting}/10</span>
+                  </div>
+                  <Progress value={player.powerHitting * 10} className="h-2" indicatorClassName="bg-red-500" />
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Running B/W Wickets</span>
+                    <span className="font-medium">{player.runningBetweenWickets}/10</span>
+                  </div>
+                  <Progress value={player.runningBetweenWickets * 10} className="h-2" indicatorClassName="bg-amber-500" />
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Pressure Handling</span>
+                    <span className="font-medium">{player.pressureHandling}/10</span>
+                  </div>
+                  <Progress value={player.pressureHandling * 10} className="h-2" indicatorClassName="bg-purple-500" />
+                </div>
+              </div>
+
+              {/* Physical & Commitment */}
+              <div className="w-full pt-4 border-t space-y-3">
+                <h4 className="text-sm font-semibold text-muted-foreground">Physical & Commitment</h4>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Fitness Level</span>
+                    <span className="font-medium">{player.fitnessLevel}/10</span>
+                  </div>
+                  <Progress value={player.fitnessLevel * 10} className="h-2" indicatorClassName="bg-green-500" />
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Reliability</span>
+                    <span className="font-medium">{player.reliabilityScore}/10</span>
+                  </div>
+                  <Progress value={player.reliabilityScore * 10} className="h-2" indicatorClassName="bg-teal-500" />
+                </div>
+                {player.trainingAttendance !== null && (
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Training Attendance</span>
+                      <span className="font-medium">{player.trainingAttendance}%</span>
+                    </div>
+                    <Progress value={player.trainingAttendance} className="h-2" indicatorClassName="bg-indigo-500" />
+                  </div>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -363,6 +453,123 @@ export default function PlayerDetailPage() {
                 <p className="text-xs text-muted-foreground">Availability</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Injury Status & Detailed Skills */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Injury Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Heart className="h-5 w-5" />
+              Health & Fitness
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              {player.currentInjuryStatus === 'FIT' ? (
+                <CheckCircle className="h-6 w-6 text-green-500" />
+              ) : player.currentInjuryStatus === 'INJURED' ? (
+                <AlertCircle className="h-6 w-6 text-red-500" />
+              ) : (
+                <AlertCircle className="h-6 w-6 text-amber-500" />
+              )}
+              <div>
+                <p className="font-medium">
+                  {player.currentInjuryStatus === 'FIT' ? 'Fully Fit' :
+                   player.currentInjuryStatus === 'MINOR_NIGGLE' ? 'Minor Niggle' :
+                   player.currentInjuryStatus === 'RECOVERING' ? 'Recovering' : 'Injured'}
+                </p>
+                <p className="text-sm text-muted-foreground">Current Status</p>
+              </div>
+            </div>
+
+            {player.injuryHistory.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium mb-2">Injury History</h4>
+                <div className="space-y-2">
+                  {player.injuryHistory.map((injury, index) => (
+                    <div key={index} className="text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded-md">
+                      {injury}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Previous Teams */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Career History
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {player.previousTeams.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {player.previousTeams.map((team, index) => (
+                  <Badge key={index} variant="secondary">
+                    {team}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No previous teams listed</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Fielding Positions & Bowling Variations */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Preferred Fielding Positions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Preferred Fielding Positions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {player.preferredFieldingPositions.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {player.preferredFieldingPositions.map((position, index) => (
+                  <Badge key={index} variant="outline" className="bg-pitch-50 dark:bg-pitch-900/30">
+                    {position}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No preferred positions set</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Bowling Variations */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5" />
+              Bowling Variations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {player.bowlingVariations.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {player.bowlingVariations.map((variation, index) => (
+                  <Badge key={index} variant="outline" className="bg-leather-50 dark:bg-leather-900/30">
+                    {variation}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No bowling variations listed</p>
+            )}
           </CardContent>
         </Card>
       </div>

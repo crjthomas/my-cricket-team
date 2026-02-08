@@ -44,6 +44,13 @@ export const typeDefs = gql`
     POOR
   }
 
+  enum InjuryStatus {
+    FIT
+    MINOR_NIGGLE
+    RECOVERING
+    INJURED
+  }
+
   enum AvailabilityStatus {
     AVAILABLE
     UNAVAILABLE
@@ -87,10 +94,33 @@ export const typeDefs = gql`
     battingStyle: BattingStyle!
     bowlingStyle: BowlingStyle!
     battingPosition: BattingPosition!
+    
+    # Skill Ratings (1-10)
     battingSkill: Int!
     bowlingSkill: Int!
     fieldingSkill: Int!
     experienceLevel: Int!
+    powerHitting: Int!
+    runningBetweenWickets: Int!
+    pressureHandling: Int!
+    
+    # Physical & Fitness
+    fitnessLevel: Int!
+    currentInjuryStatus: InjuryStatus!
+    
+    # Detailed Skills
+    preferredFieldingPositions: [String!]!
+    bowlingVariations: [String!]!
+    
+    # Availability & Commitment
+    reliabilityScore: Int!
+    trainingAttendance: Int
+    
+    # Career History
+    previousTeams: [String!]!
+    injuryHistory: [String!]!
+    
+    # Team Status
     captainChoice: Int!
     isActive: Boolean!
     isCaptain: Boolean!
@@ -437,6 +467,17 @@ export const typeDefs = gql`
     bowlingSkill: Int
     fieldingSkill: Int
     experienceLevel: Int
+    powerHitting: Int
+    runningBetweenWickets: Int
+    pressureHandling: Int
+    fitnessLevel: Int
+    currentInjuryStatus: InjuryStatus
+    preferredFieldingPositions: [String!]
+    bowlingVariations: [String!]
+    reliabilityScore: Int
+    trainingAttendance: Int
+    previousTeams: [String!]
+    injuryHistory: [String!]
     captainChoice: Int
     isWicketkeeper: Boolean
   }
@@ -454,6 +495,17 @@ export const typeDefs = gql`
     bowlingSkill: Int
     fieldingSkill: Int
     experienceLevel: Int
+    powerHitting: Int
+    runningBetweenWickets: Int
+    pressureHandling: Int
+    fitnessLevel: Int
+    currentInjuryStatus: InjuryStatus
+    preferredFieldingPositions: [String!]
+    bowlingVariations: [String!]
+    reliabilityScore: Int
+    trainingAttendance: Int
+    previousTeams: [String!]
+    injuryHistory: [String!]
     captainChoice: Int
     isActive: Boolean
     isWicketkeeper: Boolean

@@ -97,10 +97,29 @@ model Player {
   battingPosition BattingPosition
 
   // Skill Ratings (1-10)
-  battingSkill    Int @default(5)
-  bowlingSkill    Int @default(5)
-  fieldingSkill   Int @default(5)
-  experienceLevel Int @default(5)
+  battingSkill          Int @default(5)
+  bowlingSkill          Int @default(5)
+  fieldingSkill         Int @default(5)
+  experienceLevel       Int @default(5)
+  powerHitting          Int @default(5)  // Ability to hit big shots
+  runningBetweenWickets Int @default(5)  // Speed and judgment between wickets
+  pressureHandling      Int @default(5)  // Performance under pressure
+
+  // Physical & Fitness
+  fitnessLevel          Int @default(5)  // Overall fitness (1-10)
+  currentInjuryStatus   InjuryStatus @default(FIT)
+
+  // Detailed Skills
+  preferredFieldingPositions String[]    // e.g., ["Slip", "Point", "Cover"]
+  bowlingVariations          String[]    // e.g., ["Yorker", "Slower Ball", "Googly"]
+
+  // Availability & Commitment
+  reliabilityScore      Int @default(5)  // Shows up when selected (1-10)
+  trainingAttendance    Int?             // Percentage (0-100)
+
+  // Career History
+  previousTeams         String[]         // Previous clubs/teams played for
+  injuryHistory         String[]         // Past injuries e.g., ["Hamstring - 2024", "Shoulder - 2023"]
 
   // Team Status
   captainChoice   Int      @default(2) // 1 = first choice, 2 = second, 3 = third
@@ -117,6 +136,13 @@ model Player {
   mediaAppearances  MediaTag[]
 
   @@map("players")
+}
+
+enum InjuryStatus {
+  FIT
+  MINOR_NIGGLE
+  RECOVERING
+  INJURED
 }
 
 enum PlayerRole {
