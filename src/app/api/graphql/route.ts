@@ -5,6 +5,8 @@ import { resolvers } from '@/lib/graphql/resolvers'
 import { makeExecutableSchema } from '@graphql-tools/schema'
 import { NextRequest } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 const schema = makeExecutableSchema({
   typeDefs,
   resolvers,

@@ -3,6 +3,8 @@ import { getCurrentUser, createUser, isAdmin } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { UserRole } from '@prisma/client'
 
+export const dynamic = 'force-dynamic'
+
 // Get all users (admin only)
 export async function GET(request: NextRequest) {
   try {
