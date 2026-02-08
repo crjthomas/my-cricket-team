@@ -100,10 +100,10 @@ export default function SettingsPage() {
                   {item.type === 'text' && (
                     <span className="text-muted-foreground">{item.value}</span>
                   )}
-                  {item.type === 'select' && (
-                    <select className="bg-muted rounded-md px-3 py-1 text-sm">
+                  {item.type === 'select' && 'options' in item && (
+                    <select className="bg-muted rounded-md px-3 py-1 text-sm" defaultValue={item.value as string}>
                       {item.options?.map((opt) => (
-                        <option key={opt} selected={opt === item.value}>{opt}</option>
+                        <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
                   )}

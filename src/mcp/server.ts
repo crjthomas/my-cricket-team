@@ -322,15 +322,17 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 // Handle tool calls
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const typedArgs = args as any
 
   switch (name) {
     case 'get_players': {
       let result = [...players]
-      if (args?.role) {
-        result = result.filter((p) => p.role === args.role)
+      if (typedArgs?.role) {
+        result = result.filter((p) => p.role === typedArgs.role)
       }
-      if (args?.form) {
-        result = result.filter((p) => p.form === args.form)
+      if (typedArgs?.form) {
+        result = result.filter((p) => p.form === typedArgs.form)
       }
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
@@ -339,7 +341,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     case 'get_player_stats': {
       const player = players.find(
-        (p) => p.id === args?.playerId || p.name.toLowerCase().includes((args?.playerName || '').toLowerCase())
+        (p) => p.id === typedArgs?.playerId || p.name.toLowerCase().includes((typedArgs?.playerName || '').toLowerCase())
       )
       if (!player) {
         return {
@@ -368,14 +370,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     case 'get_upcoming_matches': {
-      const limit = args?.limit || 5
+      const limit = typedArgs?.limit || 5
       return {
         content: [{ type: 'text', text: JSON.stringify(matches.slice(0, limit), null, 2) }],
       }
     }
 
     case 'get_opportunity_debt': {
-      const threshold = args?.threshold || 0.6
+      const threshold = typedArgs?.threshold || 0.6
       const playersNeedingGames = players
         .map((p) => ({
           ...p,
@@ -412,7 +414,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     case 'suggest_squad': {
-      const match = matches.find((m) => m.id === args?.matchId)
+      const match = matches.find((m) => m.id === typedArgs?.matchId)
       if (!match) {
         return {
           content: [{ type: 'text', text: 'Match not found' }],
@@ -420,7 +422,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
       }
 
-      const mode = args?.mode || 'BALANCED'
+      const mode = typedArgs?.mode || 'BALANCED'
       
       // Simple squad selection logic (in production, this would call the AI service)
       const sortedPlayers = [...players].sort((a, b) => {
@@ -459,7 +461,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     case 'analyze_match': {
-      const match = matches.find((m) => m.id === args?.matchId)
+      const match = matches.find((m) => m.id === typedArgs?.matchId)
       if (!match) {
         return {
           content: [{ type: 'text', text: 'Match not found' }],
@@ -496,7 +498,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     case 'get_training_plan': {
-      const player = players.find((p) => p.id === args?.playerId)
+      const player = players.find((p) => p.id === typedArgs?.playerId)
       if (!player) {
         return {
           content: [{ type: 'text', text: 'Player not found' }],
@@ -504,8 +506,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
       }
 
-      const focus = args?.focus || 'ALL_ROUND'
-      const duration = args?.duration || '2_WEEKS'
+      const focus = typedArgs?.focus || 'ALL_ROUND'
+      const duration = typedArgs?.duration || '2_WEEKS'
 
       const plan = {
         player: player.name,
@@ -558,7 +560,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     case 'compare_players': {
-      const playerIds = args?.playerIds as string[]
+      const playerIds = typedArgs?.playerIds as string[]
       if (!playerIds || playerIds.length < 2) {
         return {
           content: [{ type: 'text', text: 'Please provide at least 2 player IDs to compare' }],
