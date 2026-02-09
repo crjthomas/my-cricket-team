@@ -267,14 +267,16 @@ model SeasonStats {
   runOuts        Int @default(0)
   stumpings      Int @default(0)
 
-  // Form (calculated)
-  currentForm    PlayerForm @default(AVERAGE)
+  // Form (calculated or manually set)
+  currentForm    PlayerForm @default(UNKNOWN)
+  isFormManual   Boolean    @default(false)  // True if admin manually set the form
 
   @@unique([playerId, seasonId])
   @@map("season_stats")
 }
 
 enum PlayerForm {
+  UNKNOWN      // No performance data yet
   EXCELLENT
   GOOD
   AVERAGE

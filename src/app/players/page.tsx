@@ -389,9 +389,11 @@ export default function PlayersPage() {
                         <Badge className={getRoleColor(player.primaryRole)}>
                           {player.primaryRole.replace(/_/g, ' ')}
                         </Badge>
-                        <Badge className={getFormColor(stats.currentForm)}>
-                          {stats.currentForm}
-                        </Badge>
+                        {stats.currentForm !== 'UNKNOWN' && (
+                          <Badge className={getFormColor(stats.currentForm)}>
+                            {stats.currentForm}
+                          </Badge>
+                        )}
                         {player.captainChoice === 1 && (
                           <Badge variant="outline" className="gap-1">
                             <Star className="h-3 w-3" /> 1st Choice

@@ -33,6 +33,20 @@ import {
 import { getRoleColor, getFormColor, cn } from '@/lib/utils'
 import { useAuth } from '@/lib/auth-context'
 import { Switch } from '@/components/ui/switch'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+
+const formOptions = [
+  { value: 'UNKNOWN', label: 'Not Set', color: 'text-gray-500' },
+  { value: 'EXCELLENT', label: 'Excellent', color: 'text-green-600' },
+  { value: 'GOOD', label: 'Good', color: 'text-blue-600' },
+  { value: 'AVERAGE', label: 'Average', color: 'text-amber-600' },
+  { value: 'POOR', label: 'Poor', color: 'text-red-600' },
+]
 
 interface RatingHistoryItem {
   id: string
@@ -311,9 +325,58 @@ export default function PlayerDetailPage() {
                 <Badge className={getRoleColor(player.primaryRole)}>
                   {player.primaryRole.replace(/_/g, ' ')}
                 </Badge>
-                <Badge className={getFormColor(stats.currentForm)}>
-                  {stats.currentForm}
-                </Badge>
+                {isAdmin ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Badge 
+                        className={cn(
+                          getFormColor(stats.currentForm),
+                          'cursor-pointer hover:opacity-80',
+                          stats.currentForm === 'UNKNOWN' && 'bg-gray-100 text-gray-500 border border-dashed border-gray-300'
+                        )}
+                      >
+                        {stats.currentForm === 'UNKNOWN' ? 'Set Form' : stats.currentForm}
+                      </Badge>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center">
+                      {formOptions.map((option) => (
+                        <DropdownMenuItem
+                          key={option.value}
+                          className={cn('cursor-pointer', option.color)}
+                          onClick={async () => {
+                            try {
+                              await fetch('/api/graphql', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  query: `
+                                    mutation SetPlayerForm($playerId: String!, $form: PlayerForm!) {
+                                      setPlayerForm(playerId: $playerId, form: $form) {
+                                        currentForm
+                                      }
+                                    }
+                                  `,
+                                  variables: { playerId: player.id, form: option.value }
+                                }),
+                              })
+                              fetchPlayer()
+                            } catch (error) {
+                              console.error('Failed to set form:', error)
+                            }
+                          }}
+                        >
+                          {option.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  stats.currentForm !== 'UNKNOWN' && (
+                    <Badge className={getFormColor(stats.currentForm)}>
+                      {stats.currentForm}
+                    </Badge>
+                  )
+                )}
                 {player.isCaptain && (
                   <Badge variant="warning">Captain</Badge>
                 )}

@@ -1314,6 +1314,58 @@ export const resolvers = {
         changes: allChanges,
       }
     },
+
+    setPlayerForm: async (
+      _: unknown,
+      { playerId, form }: { playerId: string; form: string }
+    ) => {
+      // Get current season
+      const currentSeason = await prisma.season.findFirst({
+        where: { isCurrent: true },
+      })
+
+      if (!currentSeason) {
+        throw new Error('No active season found')
+      }
+
+      // Get or create season stats for this player
+      let seasonStats = await prisma.seasonStats.findUnique({
+        where: {
+          playerId_seasonId: {
+            playerId,
+            seasonId: currentSeason.id,
+          },
+        },
+      })
+
+      if (!seasonStats) {
+        // Create season stats if they don't exist
+        seasonStats = await prisma.seasonStats.create({
+          data: {
+            playerId,
+            seasonId: currentSeason.id,
+            currentForm: form as 'UNKNOWN' | 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'POOR',
+            isFormManual: true,
+          },
+        })
+      } else {
+        // Update existing season stats
+        seasonStats = await prisma.seasonStats.update({
+          where: {
+            playerId_seasonId: {
+              playerId,
+              seasonId: currentSeason.id,
+            },
+          },
+          data: {
+            currentForm: form as 'UNKNOWN' | 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'POOR',
+            isFormManual: true,
+          },
+        })
+      }
+
+      return seasonStats
+    },
   },
 }
 

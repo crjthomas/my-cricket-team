@@ -40,6 +40,7 @@ export const typeDefs = gql`
   }
 
   enum PlayerForm {
+    UNKNOWN
     EXCELLENT
     GOOD
     AVERAGE
@@ -191,6 +192,7 @@ export const typeDefs = gql`
     stumpings: Int!
     
     currentForm: PlayerForm!
+    isFormManual: Boolean!
     
     # Computed
     battingAverage: Float
@@ -820,6 +822,12 @@ export const typeDefs = gql`
       excludePlayerIds: [String!]
       reason: String
     ): RatingRecalculationResult!
+    
+    # Player Form (Admin only)
+    setPlayerForm(
+      playerId: String!
+      form: PlayerForm!
+    ): SeasonStats
   }
 `
 

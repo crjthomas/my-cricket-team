@@ -100,9 +100,15 @@ export function getFormColor(form: string): string {
       return 'text-amber-600 bg-amber-100 dark:bg-amber-900 dark:text-amber-300'
     case 'POOR':
       return 'text-red-600 bg-red-100 dark:bg-red-900 dark:text-red-300'
+    case 'UNKNOWN':
+      return '' // Return empty to hide badge
     default:
       return 'text-gray-600 bg-gray-100 dark:bg-gray-900 dark:text-gray-300'
   }
+}
+
+export function shouldShowFormBadge(form: string): boolean {
+  return form !== 'UNKNOWN' && form !== ''
 }
 
 export function getAvailabilityColor(status: string): string {
