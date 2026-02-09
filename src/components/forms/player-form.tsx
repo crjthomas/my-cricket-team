@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -227,6 +227,13 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
   const [error, setError] = useState('')
   const [newPreviousTeam, setNewPreviousTeam] = useState('')
   const [newInjury, setNewInjury] = useState('')
+
+  // Update form data when player prop changes (e.g., after async fetch)
+  useEffect(() => {
+    if (player) {
+      setFormData({ ...defaultFormData, ...player })
+    }
+  }, [player])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
