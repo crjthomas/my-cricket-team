@@ -388,7 +388,7 @@ export default function RatingsPage() {
                       <div className="min-w-0">
                         <p className="font-medium truncate">{preview.playerName}</p>
                         <Badge variant="outline" className="text-xs">
-                          {preview.primaryRole.replace('_', ' ')}
+                          {preview.primaryRole.replace(/_/g, ' ')}
                         </Badge>
                       </div>
                     </div>

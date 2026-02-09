@@ -52,7 +52,7 @@ function formatPlayerData(player: PlayerWithStats): string {
   
   return `
 - ${player.name} (Jersey #${player.jerseyNumber || 'N/A'})
-  Role: ${player.primaryRole.replace('_', ' ')}
+  Role: ${player.primaryRole.replace(/_/g, ' ')}
   Batting: ${player.battingStyle.replace('_', '-')} | Position: ${player.battingPosition.replace('_', ' ')}
   Bowling: ${player.bowlingStyle.replace('_', ' ')}
   Skills: Batting ${player.battingSkill}/10, Bowling ${player.bowlingSkill}/10, Fielding ${player.fieldingSkill}/10
@@ -225,7 +225,7 @@ export async function generateSquadRecommendation(
         selectedPlayers.push({
           player,
           battingOrder: order++,
-          roleInMatch: player.primaryRole.replace('_', ' ').toLowerCase(),
+          roleInMatch: player.primaryRole.replace(/_/g, ' ').toLowerCase(),
           selectionReason: 'Added to complete the XI',
         })
       }

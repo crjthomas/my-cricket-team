@@ -652,7 +652,7 @@ The ${selectionMode.toLowerCase().replace('_', ' ')} approach prioritizes ${
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{player.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {player.primaryRole.replace('_', ' ')} • {player.currentSeasonStats?.matchesPlayed || 0}/{player.currentSeasonStats?.matchesAvailable || 0} played
+                            {player.primaryRole.replace(/_/g, ' ')} • {player.currentSeasonStats?.matchesPlayed || 0}/{player.currentSeasonStats?.matchesAvailable || 0} played
                           </p>
                         </div>
                       </div>

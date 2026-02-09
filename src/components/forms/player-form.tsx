@@ -96,6 +96,8 @@ const roles = [
   { value: 'BATSMAN', label: 'Batsman' },
   { value: 'BOWLER', label: 'Bowler' },
   { value: 'ALL_ROUNDER', label: 'All Rounder' },
+  { value: 'BATTING_ALL_ROUNDER', label: 'Batting All Rounder' },
+  { value: 'BOWLING_ALL_ROUNDER', label: 'Bowling All Rounder' },
   { value: 'WICKETKEEPER', label: 'Wicketkeeper' },
 ]
 

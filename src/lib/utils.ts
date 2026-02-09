@@ -75,11 +75,19 @@ export function getRoleColor(role: string): string {
       return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
     case 'ALL_ROUNDER':
       return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+    case 'BATTING_ALL_ROUNDER':
+      return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+    case 'BOWLING_ALL_ROUNDER':
+      return 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200'
     case 'WICKETKEEPER':
       return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
     default:
       return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
   }
+}
+
+export function formatRoleName(role: string): string {
+  return role.replace(/_/g, ' ')
 }
 
 export function getFormColor(form: string): string {

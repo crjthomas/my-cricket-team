@@ -11,6 +11,8 @@ export const typeDefs = gql`
     BATSMAN
     BOWLER
     ALL_ROUNDER
+    BATTING_ALL_ROUNDER
+    BOWLING_ALL_ROUNDER
     WICKETKEEPER
   }
 

@@ -387,7 +387,7 @@ export default function PlayersPage() {
                     <>
                       <div className="flex flex-wrap gap-2 mb-4">
                         <Badge className={getRoleColor(player.primaryRole)}>
-                          {player.primaryRole.replace('_', ' ')}
+                          {player.primaryRole.replace(/_/g, ' ')}
                         </Badge>
                         <Badge className={getFormColor(stats.currentForm)}>
                           {stats.currentForm}

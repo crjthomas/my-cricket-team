@@ -643,7 +643,7 @@ export const resolvers = {
         data: {
           type: 'PLAYER_ADDED',
           title: `${player.name} joined the team`,
-          description: `New ${player.primaryRole.toLowerCase().replace('_', ' ')} added`,
+          description: `New ${player.primaryRole.toLowerCase().replace(/_/g, ' ')} added`,
           entityType: 'player',
           entityId: player.id,
         },

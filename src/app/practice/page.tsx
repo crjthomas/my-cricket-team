@@ -103,6 +103,12 @@ export default function PracticeMatchPage() {
       case 'ALL_ROUNDER':
         rating = player.battingSkill * 0.35 + player.bowlingSkill * 0.35 + player.fieldingSkill * 0.15 + player.experienceLevel * 0.15
         break
+      case 'BATTING_ALL_ROUNDER':
+        rating = player.battingSkill * 0.45 + player.bowlingSkill * 0.25 + player.fieldingSkill * 0.15 + player.experienceLevel * 0.15
+        break
+      case 'BOWLING_ALL_ROUNDER':
+        rating = player.battingSkill * 0.25 + player.bowlingSkill * 0.45 + player.fieldingSkill * 0.15 + player.experienceLevel * 0.15
+        break
       case 'WICKETKEEPER':
         rating = player.battingSkill * 0.4 + player.bowlingSkill * 0.1 + player.fieldingSkill * 0.35 + player.experienceLevel * 0.15
         break
@@ -150,7 +156,11 @@ export default function PracticeMatchPage() {
     // Categorize players by role
     const batsmen = selectedWithRatings.filter(p => p.primaryRole === 'BATSMAN')
     const bowlers = selectedWithRatings.filter(p => p.primaryRole === 'BOWLER')
-    const allRounders = selectedWithRatings.filter(p => p.primaryRole === 'ALL_ROUNDER')
+    const allRounders = selectedWithRatings.filter(p => 
+      p.primaryRole === 'ALL_ROUNDER' || 
+      p.primaryRole === 'BATTING_ALL_ROUNDER' || 
+      p.primaryRole === 'BOWLING_ALL_ROUNDER'
+    )
     const wicketkeepers = selectedWithRatings.filter(p => p.primaryRole === 'WICKETKEEPER' || p.isWicketkeeper)
     
     // Remove wicketkeepers from batsmen if they're duplicated
@@ -266,7 +276,11 @@ export default function PracticeMatchPage() {
     // Count by role
     const batsmen = team.filter(p => p.primaryRole === 'BATSMAN').length
     const bowlers = team.filter(p => p.primaryRole === 'BOWLER').length
-    const allRounders = team.filter(p => p.primaryRole === 'ALL_ROUNDER').length
+    const allRounders = team.filter(p => 
+      p.primaryRole === 'ALL_ROUNDER' || 
+      p.primaryRole === 'BATTING_ALL_ROUNDER' || 
+      p.primaryRole === 'BOWLING_ALL_ROUNDER'
+    ).length
     const wicketkeepers = team.filter(p => p.primaryRole === 'WICKETKEEPER' || p.isWicketkeeper).length
     
     return { 
@@ -364,7 +378,7 @@ export default function PracticeMatchPage() {
                         <p className="font-medium text-sm truncate">{player.name}</p>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs px-1.5">
-                            {player.primaryRole.replace('_', ' ')}
+                            {player.primaryRole.replace(/_/g, ' ')}
                           </Badge>
                           <span className="text-xs text-muted-foreground">{rating}</span>
                         </div>
@@ -461,7 +475,7 @@ export default function PracticeMatchPage() {
                         <p className="font-medium text-sm">{player.name}</p>
                         <div className="flex items-center gap-1">
                           <Badge variant="outline" className="text-xs px-1">
-                            {player.primaryRole.replace('_', ' ')}
+                            {player.primaryRole.replace(/_/g, ' ')}
                           </Badge>
                           {player.isWicketkeeper && (
                             <Badge variant="secondary" className="text-xs px-1">WK</Badge>
@@ -523,7 +537,7 @@ export default function PracticeMatchPage() {
                         <p className="font-medium text-sm">{player.name}</p>
                         <div className="flex items-center gap-1">
                           <Badge variant="outline" className="text-xs px-1">
-                            {player.primaryRole.replace('_', ' ')}
+                            {player.primaryRole.replace(/_/g, ' ')}
                           </Badge>
                           {player.isWicketkeeper && (
                             <Badge variant="secondary" className="text-xs px-1">WK</Badge>
