@@ -129,16 +129,88 @@ const injuryStatuses = [
 ]
 
 const fieldingPositionOptions = [
-  'Slip', 'Gully', 'Point', 'Cover', 'Mid-off', 'Mid-on',
-  'Mid-wicket', 'Square Leg', 'Fine Leg', 'Third Man',
-  'Long-on', 'Long-off', 'Deep Mid-wicket', 'Deep Square Leg',
-  'Wicketkeeper', 'Boundary Rider'
+  // Close catching positions
+  'Wicketkeeper',
+  'First Slip',
+  'Second Slip',
+  'Third Slip',
+  'Fourth Slip',
+  'Leg Slip',
+  'Gully',
+  'Silly Point',
+  'Silly Mid-off',
+  'Silly Mid-on',
+  'Short Leg',
+  'Leg Gully',
+  'Bat Pad',
+  // Inner ring - off side
+  'Point',
+  'Cover Point',
+  'Cover',
+  'Extra Cover',
+  'Mid-off',
+  // Inner ring - leg side
+  'Mid-on',
+  'Mid-wicket',
+  'Square Leg',
+  'Backward Square Leg',
+  'Fine Leg',
+  // Outer ring - off side
+  'Third Man',
+  'Deep Point',
+  'Deep Cover',
+  'Deep Extra Cover',
+  'Long-off',
+  // Outer ring - leg side
+  'Long-on',
+  'Deep Mid-wicket',
+  'Deep Square Leg',
+  'Deep Fine Leg',
+  'Long Leg',
+  // Sweeper positions
+  'Sweeper Cover',
+  'Sweeper Square Leg',
+  // Other
+  'Cow Corner',
+  'Fly Slip',
+  'Short Third Man',
+  'Short Fine Leg',
+  'Backward Point',
 ]
 
 const bowlingVariationOptions = [
-  'Yorker', 'Bouncer', 'Slower Ball', 'Cutter', 'Reverse Swing',
-  'Googly', 'Doosra', 'Carrom Ball', 'Arm Ball', 'Slider',
-  'Top Spinner', 'Flipper', 'Leg Cutter', 'Off Cutter'
+  // Pace variations
+  'Yorker',
+  'Bouncer',
+  'Slower Ball',
+  'Knuckle Ball',
+  'Reverse Swing',
+  'Leg Cutter',
+  'Off Cutter',
+  'In-swinger',
+  'Out-swinger',
+  'Cross Seam',
+  'Back of Hand Slower',
+  'Wide Yorker',
+  'Toe Crusher',
+  // Spin variations - Leg Spin
+  'Googly',
+  'Flipper',
+  'Top Spinner',
+  'Slider',
+  'Wrong\'un',
+  // Spin variations - Off Spin
+  'Doosra',
+  'Carrom Ball',
+  'Arm Ball',
+  'Teesra',
+  'Undercutter',
+  // Left-arm spin
+  'Chinaman',
+  // General
+  'Drifter',
+  'Floater',
+  'Quicker Ball',
 ]
 
 export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerFormProps) {
