@@ -5,7 +5,7 @@
  * Uses weighted averages of recent performances to adjust ratings.
  */
 
-import { getPrisma } from './prisma'
+import { prisma } from './prisma'
 
 // Types for match performance data
 interface MatchPerformanceData {
@@ -212,7 +212,6 @@ export async function calculatePlayerRatingChanges(
   seasonId?: string,
   matchLimit: number = 5
 ): Promise<RatingCalculationResult> {
-  const prisma = getPrisma()
   
   // Get player with current ratings
   const player = await prisma.player.findUnique({
@@ -352,7 +351,6 @@ export async function applyRatingChanges(
   changes: RatingChange[],
   matchId?: string
 ): Promise<void> {
-  const prisma = getPrisma()
   
   if (changes.length === 0) return
   
@@ -415,7 +413,6 @@ export async function calculateAllPlayerRatingChanges(
   seasonId?: string,
   excludePlayerIds: string[] = []
 ): Promise<RatingCalculationResult[]> {
-  const prisma = getPrisma()
   
   const players = await prisma.player.findMany({
     where: {
@@ -468,7 +465,6 @@ export async function applyAllRatingChanges(
  * Update form status based on recent performances
  */
 export async function updatePlayerFormStatus(playerId: string, seasonId: string): Promise<void> {
-  const prisma = getPrisma()
   
   // Get last 5 performances
   const performances = await prisma.matchPerformance.findMany({
