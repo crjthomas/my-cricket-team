@@ -15,11 +15,22 @@ import {
   Star,
   TrendingUp,
   Users,
-  Loader2
+  Loader2,
+  Eye,
+  Edit,
+  Trash2
 } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { cn, getRoleColor, getFormColor } from '@/lib/utils'
 import { useAuth } from '@/lib/auth-context'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface Player {
   id: string
@@ -48,12 +59,41 @@ interface Player {
 const roleFilters = ['ALL', 'BATSMAN', 'BOWLER', 'ALL_ROUNDER', 'WICKETKEEPER']
 
 export default function PlayersPage() {
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('ALL')
   const [sortBy, setSortBy] = useState<'name' | 'runs' | 'wickets' | 'form'>('name')
   const [players, setPlayers] = useState<Player[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const { isAdmin } = useAuth()
+
+  const handleDeletePlayer = async (playerId: string, playerName: string) => {
+    if (confirm(`Are you sure you want to delete ${playerName}?`)) {
+      try {
+        const response = await fetch('/api/graphql', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: `
+              mutation DeletePlayer($id: ID!) {
+                deletePlayer(id: $id)
+              }
+            `,
+            variables: { id: playerId }
+          }),
+        })
+        const result = await response.json()
+        if (result.errors) {
+          alert(result.errors[0].message)
+        } else {
+          // Remove from local state
+          setPlayers(prev => prev.filter(p => p.id !== playerId))
+        }
+      } catch (error) {
+        alert('Failed to delete player')
+      }
+    }
+  }
 
   useEffect(() => {
     fetchPlayers()
@@ -301,9 +341,44 @@ export default function PlayersPage() {
                       </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={(e) => {
+                        e.preventDefault()
+                        router.push(`/players/${player.id}`)
+                      }}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Profile
+                      </DropdownMenuItem>
+                      {isAdmin && (
+                        <>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.preventDefault()
+                            router.push(`/players/${player.id}/edit`)
+                          }}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit Player
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="text-red-600 focus:text-red-600"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              handleDeletePlayer(player.id, player.name)
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Player
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
                 {(() => {
