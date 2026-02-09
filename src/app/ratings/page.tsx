@@ -131,7 +131,7 @@ export default function RatingsPage() {
             }
           }
         })
-        setExcludedPlayers(prev => new Set([...prev, ...dbExcluded]))
+        setExcludedPlayers(prev => new Set([...Array.from(prev), ...Array.from(dbExcluded)]))
         setExclusionReasons(prev => ({ ...prev, ...dbReasons }))
       }
     } catch (error) {
@@ -168,7 +168,7 @@ export default function RatingsPage() {
     
     try {
       // First, update exclusion flags in database
-      for (const playerId of excludedPlayers) {
+      for (const playerId of Array.from(excludedPlayers)) {
         await fetch('/api/graphql', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
