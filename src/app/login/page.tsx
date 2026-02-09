@@ -33,10 +33,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-900 via-red-800 to-amber-900">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-800 via-orange-700 to-amber-600">
       <Card className="w-full max-w-md mx-4">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 shadow-lg shadow-orange-500/25">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 shadow-lg shadow-amber-500/25">
             <Flame className="h-10 w-10 text-white" />
           </div>
           <CardTitle className="text-2xl font-bold">Phoenix Cricket</CardTitle>
@@ -59,7 +59,7 @@ export default function LoginPage() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                 placeholder="Enter your username"
                 required
                 autoComplete="username"
@@ -75,7 +75,7 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                 placeholder="Enter your password"
                 required
                 autoComplete="current-password"
@@ -84,7 +84,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full bg-orange-600 hover:bg-orange-700"
+              className="w-full bg-amber-600 hover:bg-amber-700"
               disabled={isLoading}
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
@@ -94,7 +94,7 @@ export default function LoginPage() {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               New to the team?{' '}
-              <a href="/register" className="text-orange-600 hover:text-orange-700 font-medium">
+              <a href="/register" className="text-amber-600 hover:text-amber-700 font-medium">
                 Create an account
               </a>
             </p>

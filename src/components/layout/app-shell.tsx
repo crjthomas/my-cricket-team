@@ -15,10 +15,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-900 via-red-800 to-amber-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-800 via-orange-700 to-amber-600">
         <div className="text-center text-white">
           <div className="flex justify-center mb-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 shadow-lg shadow-orange-500/25">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 shadow-lg shadow-amber-500/25">
               <Flame className="h-12 w-12 text-white" />
             </div>
           </div>
@@ -39,10 +39,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       window.location.href = '/login'
     }
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-900 via-red-800 to-amber-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-800 via-orange-700 to-amber-600">
         <div className="text-center text-white">
           <div className="flex justify-center mb-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 shadow-lg shadow-orange-500/25">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 shadow-lg shadow-amber-500/25">
               <Flame className="h-12 w-12 text-white" />
             </div>
           </div>

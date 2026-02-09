@@ -208,7 +208,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
                 type="text"
                 value={formData.name}
                 onChange={(e) => updateField('name', e.target.value)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400"
                 placeholder="Enter player name"
                 required
               />
@@ -219,7 +219,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
                 type="number"
                 value={formData.jerseyNumber || ''}
                 onChange={(e) => updateField('jerseyNumber', e.target.value ? parseInt(e.target.value) : null)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400"
                 placeholder="e.g., 7"
                 min="0"
                 max="99"
@@ -233,7 +233,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
               <select
                 value={formData.primaryRole}
                 onChange={(e) => updateField('primaryRole', e.target.value)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
                 {roles.map(role => (
                   <option key={role.value} value={role.value}>{role.label}</option>
@@ -245,7 +245,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
               <select
                 value={formData.captainChoice}
                 onChange={(e) => updateField('captainChoice', parseInt(e.target.value))}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
                 {captainChoices.map(choice => (
                   <option key={choice.value} value={choice.value}>{choice.label}</option>
@@ -260,7 +260,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
                 type="checkbox"
                 checked={formData.isCaptain}
                 onChange={(e) => updateField('isCaptain', e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-400"
               />
               <span className="text-sm">Captain</span>
             </label>
@@ -269,7 +269,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
                 type="checkbox"
                 checked={formData.isViceCaptain}
                 onChange={(e) => updateField('isViceCaptain', e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-400"
               />
               <span className="text-sm">Vice Captain</span>
             </label>
@@ -278,7 +278,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
                 type="checkbox"
                 checked={formData.isWicketkeeper}
                 onChange={(e) => updateField('isWicketkeeper', e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-400"
               />
               <span className="text-sm">Wicketkeeper</span>
             </label>
@@ -287,7 +287,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
                 type="checkbox"
                 checked={formData.isActive}
                 onChange={(e) => updateField('isActive', e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-400"
               />
               <span className="text-sm">Active</span>
             </label>
@@ -307,7 +307,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
               <select
                 value={formData.battingStyle}
                 onChange={(e) => updateField('battingStyle', e.target.value)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
                 {battingStyles.map(style => (
                   <option key={style.value} value={style.value}>{style.label}</option>
@@ -319,7 +319,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
               <select
                 value={formData.bowlingStyle}
                 onChange={(e) => updateField('bowlingStyle', e.target.value)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
                 {bowlingStyles.map(style => (
                   <option key={style.value} value={style.value}>{style.label}</option>
@@ -331,7 +331,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
               <select
                 value={formData.battingPosition}
                 onChange={(e) => updateField('battingPosition', e.target.value)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
                 {battingPositions.map(pos => (
                   <option key={pos.value} value={pos.value}>{pos.label}</option>
@@ -490,7 +490,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
               <select
                 value={formData.currentInjuryStatus}
                 onChange={(e) => updateField('currentInjuryStatus', e.target.value)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
                 {injuryStatuses.map(status => (
                   <option key={status.value} value={status.value}>{status.label}</option>
@@ -529,7 +529,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
                 type="number"
                 value={formData.trainingAttendance || ''}
                 onChange={(e) => updateField('trainingAttendance', e.target.value ? parseInt(e.target.value) : null)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400"
                 placeholder="e.g., 85"
                 min="0"
                 max="100"
@@ -597,7 +597,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
                 type="number"
                 value={formData.yearsPlaying || ''}
                 onChange={(e) => updateField('yearsPlaying', e.target.value ? parseInt(e.target.value) : null)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400"
                 placeholder="e.g., 5"
                 min="0"
                 max="50"
@@ -611,7 +611,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
                 type="checkbox"
                 checked={formData.isRookie}
                 onChange={(e) => updateField('isRookie', e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-400"
               />
               <div>
                 <span className="text-sm font-medium">Rookie</span>
@@ -623,7 +623,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
                 type="checkbox"
                 checked={formData.tennisBallBackground}
                 onChange={(e) => updateField('tennisBallBackground', e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-400"
               />
               <div>
                 <span className="text-sm font-medium">Tennis Ball Background</span>
@@ -646,7 +646,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
               type="text"
               value={newPreviousTeam}
               onChange={(e) => setNewPreviousTeam(e.target.value)}
-              className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400"
               placeholder="e.g., Melbourne Stars CC"
               onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('previousTeams', newPreviousTeam, setNewPreviousTeam))}
             />
@@ -689,7 +689,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
               type="text"
               value={newInjury}
               onChange={(e) => setNewInjury(e.target.value)}
-              className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400"
               placeholder="e.g., Hamstring strain - Jan 2025"
               onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('injuryHistory', newInjury, setNewInjury))}
             />
