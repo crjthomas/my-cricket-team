@@ -116,7 +116,10 @@ export default function PlayersPage() {
   const filteredPlayers = players
     .filter(player => {
       const matchesSearch = player.name.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesRole = roleFilter === 'ALL' || player.primaryRole === roleFilter
+      // For WICKETKEEPER filter, check both primaryRole and isWicketkeeper flag
+      const matchesRole = roleFilter === 'ALL' || 
+        player.primaryRole === roleFilter ||
+        (roleFilter === 'WICKETKEEPER' && player.isWicketkeeper)
       return matchesSearch && matchesRole
     })
     .sort((a, b) => {
