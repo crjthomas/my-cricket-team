@@ -151,7 +151,7 @@ export default function EditPlayerPage() {
     )
   }
 
-  const handleSubmit = async (data: PlayerData) => {
+  const handleSubmit = async (data: Omit<PlayerData, 'id'>) => {
     setIsSaving(true)
     try {
       const response = await fetch('/api/graphql', {
