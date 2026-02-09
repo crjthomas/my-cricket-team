@@ -40,6 +40,10 @@ interface PlayerData {
   isRookie: boolean
   tennisBallBackground: boolean
   yearsPlaying: number | null
+  // League Format Availability
+  availableForT20: boolean
+  availableForT30: boolean
+  leaguePreferenceNotes: string
   // Team Status
   captainChoice: number
   isWicketkeeper: boolean
@@ -96,6 +100,9 @@ export default function EditPlayerPage() {
                 isRookie
                 tennisBallBackground
                 yearsPlaying
+                availableForT20
+                availableForT30
+                leaguePreferenceNotes
                 captainChoice
                 isWicketkeeper
                 isCaptain
@@ -109,7 +116,15 @@ export default function EditPlayerPage() {
       })
 
       const { data } = await response.json()
-      setPlayer(data?.player || null)
+      if (data?.player) {
+        // Ensure leaguePreferenceNotes is a string (not null)
+        setPlayer({
+          ...data.player,
+          leaguePreferenceNotes: data.player.leaguePreferenceNotes || ''
+        })
+      } else {
+        setPlayer(null)
+      }
     } catch (error) {
       console.error('Failed to fetch player:', error)
     } finally {
