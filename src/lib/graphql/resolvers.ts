@@ -1321,7 +1321,7 @@ export const resolvers = {
     ) => {
       // Get current season
       const currentSeason = await prisma.season.findFirst({
-        where: { isCurrent: true },
+        where: { isActive: true },
       })
 
       if (!currentSeason) {
