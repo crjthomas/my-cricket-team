@@ -201,8 +201,8 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
           <CardTitle className="text-lg">Basic Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 md:col-span-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
               <label className="text-sm font-medium">Name *</label>
               <input
                 type="text"
@@ -227,7 +227,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium">Primary Role *</label>
               <select
@@ -301,7 +301,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
           <CardTitle className="text-lg">Playing Style</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium">Batting Style</label>
               <select
@@ -349,7 +349,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
           <CardDescription>Rate the player&apos;s fundamental abilities</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="text-sm font-medium flex justify-between">
                 <span>Batting</span>
@@ -417,7 +417,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
           <CardDescription>Additional performance attributes</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium flex justify-between">
                 <span>Power Hitting</span>
@@ -470,7 +470,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
           <CardTitle className="text-lg">Physical & Fitness</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium flex justify-between">
                 <span>Fitness Level</span>
@@ -507,7 +507,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
           <CardTitle className="text-lg">Commitment & Reliability</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium flex justify-between">
                 <span>Reliability Score</span>
@@ -590,7 +590,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
           <CardDescription>Player&apos;s cricket background and experience level</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium">Years Playing Cricket</label>
               <input

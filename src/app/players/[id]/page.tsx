@@ -395,7 +395,7 @@ export default function PlayerDetailPage() {
             <CardDescription>Performance in current season</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <p className="text-3xl font-bold text-pitch-600">{stats.matchesPlayed}</p>
                 <p className="text-sm text-muted-foreground">Matches Played</p>

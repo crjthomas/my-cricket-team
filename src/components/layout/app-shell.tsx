@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { Sidebar } from './sidebar'
@@ -9,6 +10,7 @@ import { Flame } from 'lucide-react'
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
   const pathname = usePathname()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Show loading state
   if (isLoading) {
@@ -53,10 +55,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Authenticated layout
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
-      <div className="flex-1 flex flex-col pl-64">
-        <Header />
-        <main className="flex-1 p-6 cricket-gradient">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="flex-1 flex flex-col lg:pl-64">
+        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <main className="flex-1 p-4 md:p-6 cricket-gradient">
           {children}
         </main>
       </div>
