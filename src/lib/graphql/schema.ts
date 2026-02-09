@@ -134,10 +134,16 @@ export const typeDefs = gql`
     createdAt: DateTime!
     updatedAt: DateTime!
     
+    # AI Rating Management
+    excludeFromAutoRating: Boolean!
+    ratingExclusionReason: String
+    lastRatingUpdate: DateTime
+    
     # Relations
     seasonStats: [SeasonStats!]!
     currentSeasonStats: SeasonStats
     availabilities: [PlayerAvailability!]!
+    ratingHistory: [RatingHistory!]!
     
     # Computed
     opportunityRatio: Float
@@ -381,6 +387,68 @@ export const typeDefs = gql`
   }
 
   # ============================================
+  # RATING TYPES
+  # ============================================
+
+  enum RatingSkillType {
+    BATTING
+    BOWLING
+    FIELDING
+    POWER_HITTING
+    RUNNING_BETWEEN_WICKETS
+    PRESSURE_HANDLING
+  }
+
+  type RatingHistory {
+    id: ID!
+    playerId: String!
+    matchId: String
+    skillType: RatingSkillType!
+    previousRating: Int!
+    newRating: Int!
+    changeAmount: Int!
+    performanceScore: Float
+    reason: String
+    createdAt: DateTime!
+  }
+
+  type RatingChange {
+    playerId: String!
+    playerName: String!
+    skillType: RatingSkillType!
+    previousRating: Int!
+    newRating: Int!
+    changeAmount: Int!
+    performanceScore: Float!
+    reason: String!
+  }
+
+  type PlayerRatingPreview {
+    playerId: String!
+    playerName: String!
+    primaryRole: String!
+    currentRatings: PlayerRatings!
+    proposedChanges: [RatingChange!]!
+    excluded: Boolean!
+    exclusionReason: String
+  }
+
+  type PlayerRatings {
+    battingSkill: Int!
+    bowlingSkill: Int!
+    fieldingSkill: Int!
+    powerHitting: Int!
+    runningBetweenWickets: Int!
+    pressureHandling: Int!
+  }
+
+  type RatingRecalculationResult {
+    updated: Int!
+    skipped: Int!
+    changes: [RatingChange!]!
+  }
+
+  # ============================================
   # AI TYPES
   # ============================================
 
@@ -600,6 +668,10 @@ export const typeDefs = gql`
     
     # AI
     aiSquadRecommendation(input: SquadSelectionInput!): SquadRecommendation!
+    
+    # Ratings (Admin only)
+    ratingPreview(seasonId: String, excludePlayerIds: [String!]): [PlayerRatingPreview!]!
+    playerRatingHistory(playerId: String!, limit: Int): [RatingHistory!]!
   }
 
   # ============================================
@@ -722,6 +794,19 @@ export const typeDefs = gql`
     # Media
     createMedia(input: MediaInput!): Media!
     deleteMedia(id: ID!): Boolean!
+    
+    # Ratings (Admin only)
+    updatePlayerRatingExclusion(
+      playerId: String!
+      exclude: Boolean!
+      reason: String
+    ): Player!
+    
+    applyRatingChanges(
+      seasonId: String
+      excludePlayerIds: [String!]
+      reason: String
+    ): RatingRecalculationResult!
   }
 `
 

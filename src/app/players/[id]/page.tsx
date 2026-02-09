@@ -13,6 +13,7 @@ import {
   Trash2,
   Star,
   TrendingUp,
+  TrendingDown,
   Trophy,
   Target,
   Activity,
@@ -22,10 +23,26 @@ import {
   Zap,
   Users,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Calculator,
+  ShieldOff,
+  Shield,
+  Minus
 } from 'lucide-react'
-import { getRoleColor, getFormColor } from '@/lib/utils'
+import { getRoleColor, getFormColor, cn } from '@/lib/utils'
 import { useAuth } from '@/lib/auth-context'
+import { Switch } from '@/components/ui/switch'
+
+interface RatingHistoryItem {
+  id: string
+  skillType: string
+  previousRating: number
+  newRating: number
+  changeAmount: number
+  performanceScore: number | null
+  reason: string | null
+  createdAt: string
+}
 
 interface PlayerData {
   id: string
@@ -66,6 +83,11 @@ interface PlayerData {
   isViceCaptain: boolean
   isWicketkeeper: boolean
   isActive: boolean
+  // AI Rating Management
+  excludeFromAutoRating: boolean
+  ratingExclusionReason: string | null
+  lastRatingUpdate: string | null
+  ratingHistory: RatingHistoryItem[]
   currentSeasonStats?: {
     matchesPlayed: number
     matchesAvailable: number
@@ -133,6 +155,19 @@ export default function PlayerDetailPage() {
                 isViceCaptain
                 isWicketkeeper
                 isActive
+                excludeFromAutoRating
+                ratingExclusionReason
+                lastRatingUpdate
+                ratingHistory {
+                  id
+                  skillType
+                  previousRating
+                  newRating
+                  changeAmount
+                  performanceScore
+                  reason
+                  createdAt
+                }
                 currentSeasonStats {
                   matchesPlayed
                   matchesAvailable
@@ -609,6 +644,142 @@ export default function PlayerDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* AI Rating History */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Calculator className="h-5 w-5" />
+                AI Rating History
+              </CardTitle>
+              <CardDescription>
+                Skill ratings updated based on match performances
+                {player.lastRatingUpdate && (
+                  <span className="block sm:inline sm:ml-2">
+                    • Last updated: {new Date(player.lastRatingUpdate).toLocaleDateString()}
+                  </span>
+                )}
+              </CardDescription>
+            </div>
+            
+            {isAdmin && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                <div className="flex-1">
+                  <p className="text-sm font-medium flex items-center gap-2">
+                    {player.excludeFromAutoRating ? (
+                      <><ShieldOff className="h-4 w-4 text-amber-500" /> Excluded from AI Updates</>
+                    ) : (
+                      <><Shield className="h-4 w-4 text-green-500" /> AI Updates Enabled</>
+                    )}
+                  </p>
+                  {player.ratingExclusionReason && (
+                    <p className="text-xs text-muted-foreground">{player.ratingExclusionReason}</p>
+                  )}
+                </div>
+                <Switch
+                  checked={!player.excludeFromAutoRating}
+                  onCheckedChange={async (checked) => {
+                    try {
+                      await fetch('/api/graphql', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          query: `
+                            mutation UpdateExclusion($playerId: String!, $exclude: Boolean!) {
+                              updatePlayerRatingExclusion(playerId: $playerId, exclude: $exclude) {
+                                id
+                                excludeFromAutoRating
+                              }
+                            }
+                          `,
+                          variables: { playerId: player.id, exclude: !checked }
+                        }),
+                      })
+                      // Refresh player data
+                      fetchPlayer()
+                    } catch (error) {
+                      console.error('Failed to update exclusion:', error)
+                    }
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {player.ratingHistory && player.ratingHistory.length > 0 ? (
+            <div className="space-y-3">
+              {player.ratingHistory.slice(0, 10).map((item) => {
+                const isPositive = item.changeAmount > 0
+                const isNegative = item.changeAmount < 0
+                
+                return (
+                  <div 
+                    key={item.id}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className={cn(
+                      "p-2 rounded-full",
+                      isPositive ? "bg-green-100 dark:bg-green-900/30" :
+                      isNegative ? "bg-red-100 dark:bg-red-900/30" :
+                      "bg-gray-100 dark:bg-gray-800"
+                    )}>
+                      {isPositive ? (
+                        <TrendingUp className="h-4 w-4 text-green-600" />
+                      ) : isNegative ? (
+                        <TrendingDown className="h-4 w-4 text-red-600" />
+                      ) : (
+                        <Minus className="h-4 w-4 text-gray-500" />
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">
+                          {item.skillType.replace(/_/g, ' ')}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          {item.previousRating} → {item.newRating}
+                        </span>
+                        <span className={cn(
+                          "text-xs font-semibold",
+                          isPositive ? "text-green-600" :
+                          isNegative ? "text-red-600" :
+                          "text-muted-foreground"
+                        )}>
+                          ({isPositive ? '+' : ''}{item.changeAmount})
+                        </span>
+                      </div>
+                      {item.reason && (
+                        <p className="text-xs text-muted-foreground truncate">{item.reason}</p>
+                      )}
+                    </div>
+                    
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(item.createdAt).toLocaleDateString()}
+                      </p>
+                      {item.performanceScore !== null && (
+                        <p className="text-xs text-muted-foreground">
+                          Score: {item.performanceScore.toFixed(1)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Calculator className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No rating updates yet.</p>
+              <p className="text-sm mt-1">Ratings will be updated based on match performances.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Recent Performances */}
       <Card>

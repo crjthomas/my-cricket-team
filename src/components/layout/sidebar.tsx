@@ -21,6 +21,7 @@ import {
   Flame,
   X,
   Target,
+  Calculator,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -40,6 +41,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
     { name: 'Matches', href: '/matches', icon: Calendar, allowed: permissions.canViewMatches, adminOnly: permissions.canManageMatches },
     { name: 'Squad Selector', href: '/squad', icon: Sparkles, allowed: permissions.canUseAISelector, adminOnly: true, aiFeature: true },
     { name: 'Practice Match', href: '/practice', icon: Target, allowed: isAdmin, adminOnly: true },
+    { name: 'AI Ratings', href: '/ratings', icon: Calculator, allowed: isAdmin, adminOnly: true, aiFeature: true },
     { name: 'Opponents', href: '/opponents', icon: Swords, allowed: isAdmin },
     { name: 'Venues', href: '/venues', icon: MapPin, allowed: isAdmin },
     { name: 'Statistics', href: '/stats', icon: BarChart3, allowed: permissions.canViewStats },

@@ -133,12 +133,18 @@ model Player {
   isViceCaptain   Boolean  @default(false)
   isWicketkeeper  Boolean  @default(false)
 
+  // AI Rating Management
+  excludeFromAutoRating  Boolean   @default(false)  // Captain override - skip auto rating updates
+  ratingExclusionReason  String?                     // Reason for exclusion
+  lastRatingUpdate       DateTime?                   // When ratings were last auto-updated
+
   // Relations
   seasonStats       SeasonStats[]
   matchPerformances MatchPerformance[]
   availabilities    PlayerAvailability[]
   squadSelections   SquadPlayer[]
   mediaAppearances  MediaTag[]
+  ratingHistory     RatingHistory[]
 
   @@map("players")
 }
@@ -695,5 +701,41 @@ enum ActivityType {
   MEDIA_UPLOADED
   SEASON_STARTED
   AI_RECOMMENDATION
+  RATING_UPDATED
+}
+
+// ============================================
+// RATING HISTORY
+// ============================================
+
+model RatingHistory {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  playerId  String
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  
+  matchId   String?  // Which match triggered this update (null for manual recalculation)
+
+  // Skill changes
+  skillType         RatingSkillType
+  previousRating    Int
+  newRating         Int
+  changeAmount      Int              // Can be negative
+  
+  // Context
+  performanceScore  Float?           // The calculated performance score that led to this change
+  reason            String?          // e.g., "Auto-update after match vs Tigers", "Manual recalculation"
+  
+  @@map("rating_history")
+}
+
+enum RatingSkillType {
+  BATTING
+  BOWLING
+  FIELDING
+  POWER_HITTING
+  RUNNING_BETWEEN_WICKETS
+  PRESSURE_HANDLING
 }
 

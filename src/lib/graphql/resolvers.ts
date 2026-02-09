@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { generateSquadRecommendation } from '@/lib/ai/squad-selector'
+import { calculatePlayerRatingChanges, calculateAllPlayerRatingChanges, applyRatingChanges } from '@/lib/rating-calculator'
 import { GraphQLScalarType, Kind } from 'graphql'
-import type { Player, SeasonStats, Match, Opponent, Season, Squad, SquadPlayer, PlayerAvailability } from '@prisma/client'
+import type { Player, SeasonStats, Match, Opponent, Season, Squad, SquadPlayer, PlayerAvailability, RatingHistory } from '@prisma/client'
 
 // DateTime scalar
 const dateTimeScalar = new GraphQLScalarType({
@@ -96,6 +97,17 @@ export const resolvers = {
     overallSkill: (parent: Player) => {
       return (parent.battingSkill + parent.bowlingSkill + parent.fieldingSkill) / 3
     },
+    ratingHistory: async (parent: Player) => {
+      return prisma.ratingHistory.findMany({
+        where: { playerId: parent.id },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      })
+    },
+  },
+
+  RatingHistory: {
+    // No additional resolvers needed - all fields are directly on the model
   },
 
   SeasonStats: {
@@ -535,6 +547,60 @@ export const resolvers = {
       })
 
       return recommendation
+    },
+
+    // Rating Queries (Admin only - authorization handled in frontend/API layer)
+    ratingPreview: async (_: unknown, { seasonId, excludePlayerIds }: { seasonId?: string; excludePlayerIds?: string[] }) => {
+      const results = await calculateAllPlayerRatingChanges(seasonId, excludePlayerIds || [])
+      
+      // Get current player data to include in response
+      const playerIds = results.map(r => r.playerId)
+      const players = await prisma.player.findMany({
+        where: { id: { in: playerIds } },
+        select: {
+          id: true,
+          name: true,
+          primaryRole: true,
+          battingSkill: true,
+          bowlingSkill: true,
+          fieldingSkill: true,
+          powerHitting: true,
+          runningBetweenWickets: true,
+          pressureHandling: true,
+          excludeFromAutoRating: true,
+          ratingExclusionReason: true,
+        }
+      })
+      
+      const playerMap = new Map(players.map(p => [p.id, p]))
+      
+      return results.map(result => {
+        const player = playerMap.get(result.playerId)
+        return {
+          playerId: result.playerId,
+          playerName: result.playerName,
+          primaryRole: player?.primaryRole || 'BATSMAN',
+          currentRatings: {
+            battingSkill: player?.battingSkill || 5,
+            bowlingSkill: player?.bowlingSkill || 5,
+            fieldingSkill: player?.fieldingSkill || 5,
+            powerHitting: player?.powerHitting || 5,
+            runningBetweenWickets: player?.runningBetweenWickets || 5,
+            pressureHandling: player?.pressureHandling || 5,
+          },
+          proposedChanges: result.changes,
+          excluded: result.excluded,
+          exclusionReason: result.exclusionReason,
+        }
+      })
+    },
+
+    playerRatingHistory: async (_: unknown, { playerId, limit }: { playerId: string; limit?: number }) => {
+      return prisma.ratingHistory.findMany({
+        where: { playerId },
+        orderBy: { createdAt: 'desc' },
+        take: limit || 20,
+      })
     },
   },
 
@@ -1162,6 +1228,91 @@ export const resolvers = {
     deleteMedia: async (_: unknown, { id }: { id: string }) => {
       await prisma.media.delete({ where: { id } })
       return true
+    },
+
+    // Rating Mutations (Admin only)
+    updatePlayerRatingExclusion: async (
+      _: unknown,
+      { playerId, exclude, reason }: { playerId: string; exclude: boolean; reason?: string }
+    ) => {
+      const player = await prisma.player.update({
+        where: { id: playerId },
+        data: {
+          excludeFromAutoRating: exclude,
+          ratingExclusionReason: exclude ? reason : null,
+        },
+      })
+
+      await prisma.activity.create({
+        data: {
+          type: 'PLAYER_UPDATED',
+          title: exclude 
+            ? `${player.name} excluded from auto rating updates`
+            : `${player.name} included in auto rating updates`,
+          description: reason || undefined,
+          entityType: 'player',
+          entityId: player.id,
+        },
+      })
+
+      return player
+    },
+
+    applyRatingChanges: async (
+      _: unknown,
+      { seasonId, excludePlayerIds, reason }: { seasonId?: string; excludePlayerIds?: string[]; reason?: string }
+    ) => {
+      // Calculate all rating changes
+      const results = await calculateAllPlayerRatingChanges(seasonId, excludePlayerIds || [])
+      
+      const allChanges: Array<{
+        playerId: string
+        playerName: string
+        skillType: 'BATTING' | 'BOWLING' | 'FIELDING' | 'POWER_HITTING' | 'RUNNING_BETWEEN_WICKETS' | 'PRESSURE_HANDLING'
+        previousRating: number
+        newRating: number
+        changeAmount: number
+        performanceScore: number
+        reason: string
+      }> = []
+      
+      let updated = 0
+      let skipped = 0
+      
+      for (const result of results) {
+        if (result.excluded || result.changes.length === 0) {
+          skipped++
+          continue
+        }
+        
+        // Apply changes for this player
+        const changesWithReason = result.changes.map(c => ({
+          ...c,
+          reason: reason || 'Bulk recalculation by admin'
+        }))
+        
+        await applyRatingChanges(changesWithReason)
+        allChanges.push(...changesWithReason)
+        updated++
+      }
+      
+      // Log activity
+      if (updated > 0) {
+        await prisma.activity.create({
+          data: {
+            type: 'RATING_UPDATED',
+            title: `Player ratings recalculated`,
+            description: `${updated} players updated, ${skipped} skipped`,
+            entityType: 'system',
+          },
+        })
+      }
+      
+      return {
+        updated,
+        skipped,
+        changes: allChanges,
+      }
     },
   },
 }
