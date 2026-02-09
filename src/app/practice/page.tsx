@@ -146,44 +146,85 @@ export default function PracticeMatchPage() {
     const selectedWithRatings: TeamPlayer[] = players
       .filter(p => selectedPlayers.has(p.id))
       .map(p => ({ ...p, overallRating: calculateOverallRating(p) }))
-      .sort((a, b) => b.overallRating - a.overallRating) // Sort by rating descending
 
-    // Balanced split algorithm - alternate picking from sorted list
+    // Categorize players by role
+    const batsmen = selectedWithRatings.filter(p => p.primaryRole === 'BATSMAN')
+    const bowlers = selectedWithRatings.filter(p => p.primaryRole === 'BOWLER')
+    const allRounders = selectedWithRatings.filter(p => p.primaryRole === 'ALL_ROUNDER')
+    const wicketkeepers = selectedWithRatings.filter(p => p.primaryRole === 'WICKETKEEPER' || p.isWicketkeeper)
+    
+    // Remove wicketkeepers from batsmen if they're duplicated
+    const pureRolePlayers = {
+      batsmen: batsmen.filter(p => !p.isWicketkeeper),
+      bowlers: bowlers.sort((a, b) => b.overallRating - a.overallRating),
+      allRounders: allRounders.sort((a, b) => b.overallRating - a.overallRating),
+      wicketkeepers: wicketkeepers.sort((a, b) => b.overallRating - a.overallRating),
+    }
+    
+    // Sort batsmen by rating
+    pureRolePlayers.batsmen.sort((a, b) => b.overallRating - a.overallRating)
+
     const newTeamA: TeamPlayer[] = []
     const newTeamB: TeamPlayer[] = []
     
-    // First, try to distribute wicketkeepers evenly
-    const wicketkeepers = selectedWithRatings.filter(p => p.isWicketkeeper)
-    const nonWicketkeepers = selectedWithRatings.filter(p => !p.isWicketkeeper)
+    // Helper to add player to team with fewer of that role, or fewer total
+    const distributeEvenly = (playerList: TeamPlayer[], countA: () => number, countB: () => number) => {
+      playerList.forEach((player, index) => {
+        const aCount = countA()
+        const bCount = countB()
+        
+        // Alternate based on current counts for balance
+        if (aCount <= bCount) {
+          newTeamA.push(player)
+        } else {
+          newTeamB.push(player)
+        }
+      })
+    }
     
-    // Distribute wicketkeepers
-    wicketkeepers.forEach((wk, index) => {
-      if (index % 2 === 0) {
-        newTeamA.push(wk)
-      } else {
-        newTeamB.push(wk)
-      }
+    // 1. Distribute wicketkeepers evenly
+    pureRolePlayers.wicketkeepers.forEach((wk, index) => {
+      if (index % 2 === 0) newTeamA.push(wk)
+      else newTeamB.push(wk)
     })
     
-    // Sort remaining by rating and use snake draft for balance
-    const remaining = [...nonWicketkeepers].sort((a, b) => b.overallRating - a.overallRating)
-    
-    // Snake draft: 1st to A, 2nd to B, 3rd to B, 4th to A, etc.
-    remaining.forEach((player, index) => {
+    // 2. Distribute bowlers evenly (snake draft for rating balance)
+    pureRolePlayers.bowlers.forEach((player, index) => {
       const round = Math.floor(index / 2)
-      const pick = index % 2
-      
-      // Alternate direction each round for better balance
       if (round % 2 === 0) {
-        if (pick === 0) newTeamA.push(player)
+        if (index % 2 === 0) newTeamA.push(player)
         else newTeamB.push(player)
       } else {
-        if (pick === 0) newTeamB.push(player)
+        if (index % 2 === 0) newTeamB.push(player)
         else newTeamA.push(player)
       }
     })
     
-    // Balance team sizes if odd number
+    // 3. Distribute all-rounders evenly (snake draft)
+    pureRolePlayers.allRounders.forEach((player, index) => {
+      const round = Math.floor(index / 2)
+      if (round % 2 === 0) {
+        if (index % 2 === 0) newTeamA.push(player)
+        else newTeamB.push(player)
+      } else {
+        if (index % 2 === 0) newTeamB.push(player)
+        else newTeamA.push(player)
+      }
+    })
+    
+    // 4. Distribute batsmen evenly (snake draft)
+    pureRolePlayers.batsmen.forEach((player, index) => {
+      const round = Math.floor(index / 2)
+      if (round % 2 === 0) {
+        if (index % 2 === 0) newTeamA.push(player)
+        else newTeamB.push(player)
+      } else {
+        if (index % 2 === 0) newTeamB.push(player)
+        else newTeamA.push(player)
+      }
+    })
+    
+    // 5. Balance team sizes if needed
     while (Math.abs(newTeamA.length - newTeamB.length) > 1) {
       if (newTeamA.length > newTeamB.length) {
         const moved = newTeamA.pop()
@@ -213,16 +254,27 @@ export default function PracticeMatchPage() {
   }
 
   const getTeamStats = (team: TeamPlayer[]) => {
-    if (team.length === 0) return { avg: 0, batting: 0, bowling: 0, fielding: 0 }
+    if (team.length === 0) return { 
+      avg: 0, batting: 0, bowling: 0, fielding: 0,
+      batsmen: 0, bowlers: 0, allRounders: 0, wicketkeepers: 0
+    }
     const batting = team.reduce((sum, p) => sum + p.battingSkill, 0) / team.length
     const bowling = team.reduce((sum, p) => sum + p.bowlingSkill, 0) / team.length
     const fielding = team.reduce((sum, p) => sum + p.fieldingSkill, 0) / team.length
     const avg = team.reduce((sum, p) => sum + p.overallRating, 0) / team.length
+    
+    // Count by role
+    const batsmen = team.filter(p => p.primaryRole === 'BATSMAN').length
+    const bowlers = team.filter(p => p.primaryRole === 'BOWLER').length
+    const allRounders = team.filter(p => p.primaryRole === 'ALL_ROUNDER').length
+    const wicketkeepers = team.filter(p => p.primaryRole === 'WICKETKEEPER' || p.isWicketkeeper).length
+    
     return { 
       avg: Math.round(avg * 10) / 10, 
       batting: Math.round(batting * 10) / 10, 
       bowling: Math.round(bowling * 10) / 10, 
-      fielding: Math.round(fielding * 10) / 10 
+      fielding: Math.round(fielding * 10) / 10,
+      batsmen, bowlers, allRounders, wicketkeepers
     }
   }
 
@@ -383,10 +435,13 @@ export default function PracticeMatchPage() {
                     Avg: {teamAStats.avg}
                   </Badge>
                 </div>
-                <div className="flex gap-4 text-xs text-muted-foreground mt-2">
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-2">
                   <span>Bat: {teamAStats.batting}</span>
-                  <span>Bowl: {teamBStats.bowling}</span>
+                  <span>Bowl: {teamAStats.bowling}</span>
                   <span>Field: {teamAStats.fielding}</span>
+                  <span className="text-blue-600 font-medium">
+                    {teamAStats.batsmen}B / {teamAStats.bowlers}Bw / {teamAStats.allRounders}AR / {teamAStats.wicketkeepers}WK
+                  </span>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -442,10 +497,13 @@ export default function PracticeMatchPage() {
                     Avg: {teamBStats.avg}
                   </Badge>
                 </div>
-                <div className="flex gap-4 text-xs text-muted-foreground mt-2">
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-2">
                   <span>Bat: {teamBStats.batting}</span>
                   <span>Bowl: {teamBStats.bowling}</span>
                   <span>Field: {teamBStats.fielding}</span>
+                  <span className="text-green-600 font-medium">
+                    {teamBStats.batsmen}B / {teamBStats.bowlers}Bw / {teamBStats.allRounders}AR / {teamBStats.wicketkeepers}WK
+                  </span>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -498,43 +556,76 @@ export default function PracticeMatchPage() {
                 Team Balance
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 rounded-lg bg-muted/50">
-                  <p className="text-sm text-muted-foreground mb-1">Overall Rating</p>
-                  <div className="flex justify-center gap-4">
-                    <div>
+            <CardContent className="space-y-6">
+              {/* Skill Ratings */}
+              <div>
+                <h4 className="text-sm font-medium mb-3">Skill Ratings</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-3 rounded-lg bg-muted/50">
+                    <p className="text-xs text-muted-foreground mb-1">Overall</p>
+                    <div className="flex justify-center gap-3">
                       <p className="text-lg font-bold text-blue-600">{teamAStats.avg}</p>
-                      <p className="text-xs text-muted-foreground">Team A</p>
-                    </div>
-                    <div>
                       <p className="text-lg font-bold text-green-600">{teamBStats.avg}</p>
-                      <p className="text-xs text-muted-foreground">Team B</p>
+                    </div>
+                    <p className="text-xs mt-1 text-muted-foreground">
+                      Diff: {Math.abs(teamAStats.avg - teamBStats.avg).toFixed(1)}
+                    </p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-muted/50">
+                    <p className="text-xs text-muted-foreground mb-1">Batting</p>
+                    <div className="flex justify-center gap-3">
+                      <p className="text-lg font-bold text-blue-600">{teamAStats.batting}</p>
+                      <p className="text-lg font-bold text-green-600">{teamBStats.batting}</p>
                     </div>
                   </div>
-                  <p className="text-xs mt-2 text-muted-foreground">
-                    Diff: {Math.abs(teamAStats.avg - teamBStats.avg).toFixed(1)}
-                  </p>
-                </div>
-                <div className="text-center p-4 rounded-lg bg-muted/50">
-                  <p className="text-sm text-muted-foreground mb-1">Batting</p>
-                  <div className="flex justify-center gap-4">
-                    <p className="text-lg font-bold text-blue-600">{teamAStats.batting}</p>
-                    <p className="text-lg font-bold text-green-600">{teamBStats.batting}</p>
+                  <div className="text-center p-3 rounded-lg bg-muted/50">
+                    <p className="text-xs text-muted-foreground mb-1">Bowling</p>
+                    <div className="flex justify-center gap-3">
+                      <p className="text-lg font-bold text-blue-600">{teamAStats.bowling}</p>
+                      <p className="text-lg font-bold text-green-600">{teamBStats.bowling}</p>
+                    </div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-muted/50">
+                    <p className="text-xs text-muted-foreground mb-1">Fielding</p>
+                    <div className="flex justify-center gap-3">
+                      <p className="text-lg font-bold text-blue-600">{teamAStats.fielding}</p>
+                      <p className="text-lg font-bold text-green-600">{teamBStats.fielding}</p>
+                    </div>
                   </div>
                 </div>
-                <div className="text-center p-4 rounded-lg bg-muted/50">
-                  <p className="text-sm text-muted-foreground mb-1">Bowling</p>
-                  <div className="flex justify-center gap-4">
-                    <p className="text-lg font-bold text-blue-600">{teamAStats.bowling}</p>
-                    <p className="text-lg font-bold text-green-600">{teamBStats.bowling}</p>
+              </div>
+
+              {/* Role Distribution */}
+              <div>
+                <h4 className="text-sm font-medium mb-3">Squad Composition</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-3 rounded-lg bg-muted/50">
+                    <p className="text-xs text-muted-foreground mb-1">Batsmen</p>
+                    <div className="flex justify-center gap-3">
+                      <p className="text-lg font-bold text-blue-600">{teamAStats.batsmen}</p>
+                      <p className="text-lg font-bold text-green-600">{teamBStats.batsmen}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="text-center p-4 rounded-lg bg-muted/50">
-                  <p className="text-sm text-muted-foreground mb-1">Fielding</p>
-                  <div className="flex justify-center gap-4">
-                    <p className="text-lg font-bold text-blue-600">{teamAStats.fielding}</p>
-                    <p className="text-lg font-bold text-green-600">{teamBStats.fielding}</p>
+                  <div className="text-center p-3 rounded-lg bg-muted/50">
+                    <p className="text-xs text-muted-foreground mb-1">Bowlers</p>
+                    <div className="flex justify-center gap-3">
+                      <p className="text-lg font-bold text-blue-600">{teamAStats.bowlers}</p>
+                      <p className="text-lg font-bold text-green-600">{teamBStats.bowlers}</p>
+                    </div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-muted/50">
+                    <p className="text-xs text-muted-foreground mb-1">All-Rounders</p>
+                    <div className="flex justify-center gap-3">
+                      <p className="text-lg font-bold text-blue-600">{teamAStats.allRounders}</p>
+                      <p className="text-lg font-bold text-green-600">{teamBStats.allRounders}</p>
+                    </div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-muted/50">
+                    <p className="text-xs text-muted-foreground mb-1">Wicketkeepers</p>
+                    <div className="flex justify-center gap-3">
+                      <p className="text-lg font-bold text-blue-600">{teamAStats.wicketkeepers}</p>
+                      <p className="text-lg font-bold text-green-600">{teamBStats.wicketkeepers}</p>
+                    </div>
                   </div>
                 </div>
               </div>
