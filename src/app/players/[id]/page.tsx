@@ -27,7 +27,8 @@ import {
   Calculator,
   ShieldOff,
   Shield,
-  Minus
+  Minus,
+  Check
 } from 'lucide-react'
 import { getRoleColor, getFormColor, cn } from '@/lib/utils'
 import { useAuth } from '@/lib/auth-context'
@@ -77,6 +78,10 @@ interface PlayerData {
   isRookie: boolean
   tennisBallBackground: boolean
   yearsPlaying: number | null
+  // League Format Availability
+  availableForT20: boolean
+  availableForT30: boolean
+  leaguePreferenceNotes: string | null
   // Team Status
   captainChoice: number
   isCaptain: boolean
@@ -150,6 +155,9 @@ export default function PlayerDetailPage() {
                 isRookie
                 tennisBallBackground
                 yearsPlaying
+                availableForT20
+                availableForT30
+                leaguePreferenceNotes
                 captainChoice
                 isCaptain
                 isViceCaptain
@@ -595,6 +603,52 @@ export default function PlayerDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* League Format Availability */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="h-5 w-5" />
+            League Format Availability
+          </CardTitle>
+          <CardDescription>Which league formats this player is available for this season</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-4">
+            <div className={`flex items-center gap-3 px-5 py-3 rounded-lg border-2 ${player.availableForT20 ? 'bg-green-50 border-green-300' : 'bg-gray-50 border-gray-200 opacity-60'}`}>
+              <div className={`w-4 h-4 rounded-full ${player.availableForT20 ? 'bg-green-500' : 'bg-gray-400'}`} />
+              <div>
+                <span className={`font-semibold text-lg ${player.availableForT20 ? 'text-green-700' : 'text-gray-500'}`}>T20 League</span>
+                <p className={`text-sm ${player.availableForT20 ? 'text-green-600' : 'text-gray-400'}`}>
+                  {player.availableForT20 ? 'Available' : 'Not Available'}
+                </p>
+              </div>
+              {player.availableForT20 && <Check className="h-5 w-5 text-green-600 ml-2" />}
+            </div>
+            <div className={`flex items-center gap-3 px-5 py-3 rounded-lg border-2 ${player.availableForT30 ? 'bg-purple-50 border-purple-300' : 'bg-gray-50 border-gray-200 opacity-60'}`}>
+              <div className={`w-4 h-4 rounded-full ${player.availableForT30 ? 'bg-purple-500' : 'bg-gray-400'}`} />
+              <div>
+                <span className={`font-semibold text-lg ${player.availableForT30 ? 'text-purple-700' : 'text-gray-500'}`}>T30 League</span>
+                <p className={`text-sm ${player.availableForT30 ? 'text-purple-600' : 'text-gray-400'}`}>
+                  {player.availableForT30 ? 'Available' : 'Not Available'}
+                </p>
+              </div>
+              {player.availableForT30 && <Check className="h-5 w-5 text-purple-600 ml-2" />}
+            </div>
+          </div>
+          {player.leaguePreferenceNotes && (
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <p className="text-sm font-medium text-muted-foreground mb-1">Notes</p>
+              <p className="text-sm">{player.leaguePreferenceNotes}</p>
+            </div>
+          )}
+          {!player.availableForT20 && !player.availableForT30 && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-700 font-medium">This player is not available for any league format this season.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Fielding Positions & Bowling Variations */}
       <div className="grid gap-6 md:grid-cols-2">

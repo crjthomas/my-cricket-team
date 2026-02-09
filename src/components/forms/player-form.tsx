@@ -38,6 +38,10 @@ interface PlayerFormData {
   isRookie: boolean
   tennisBallBackground: boolean
   yearsPlaying: number | null
+  // League Format Availability
+  availableForT20: boolean
+  availableForT30: boolean
+  leaguePreferenceNotes: string
   // Team Status
   captainChoice: number
   isWicketkeeper: boolean
@@ -78,6 +82,9 @@ const defaultFormData: PlayerFormData = {
   isRookie: false,
   tennisBallBackground: false,
   yearsPlaying: null,
+  availableForT20: true,
+  availableForT30: true,
+  leaguePreferenceNotes: '',
   captainChoice: 2,
   isWicketkeeper: false,
   isCaptain: false,
@@ -702,6 +709,53 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
                 <p className="text-xs text-muted-foreground">Previously played only tennis ball cricket</p>
               </div>
             </label>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* League Format Availability */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">League Format Availability</CardTitle>
+          <CardDescription>Which league formats this player is available for</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.availableForT20}
+                onChange={(e) => updateField('availableForT20', e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-400"
+              />
+              <div>
+                <span className="text-sm font-medium">T20 League</span>
+                <p className="text-xs text-muted-foreground">Available for T20 format matches</p>
+              </div>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.availableForT30}
+                onChange={(e) => updateField('availableForT30', e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-400"
+              />
+              <div>
+                <span className="text-sm font-medium">T30 League</span>
+                <p className="text-xs text-muted-foreground">Available for T30 format matches</p>
+              </div>
+            </label>
+          </div>
+          
+          <div>
+            <label className="text-sm font-medium">League Preference Notes</label>
+            <textarea
+              value={formData.leaguePreferenceNotes}
+              onChange={(e) => updateField('leaguePreferenceNotes', e.target.value)}
+              className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400"
+              placeholder="e.g., Prefers T30 due to work schedule, Only available for T30 on weekends..."
+              rows={2}
+            />
           </div>
         </CardContent>
       </Card>

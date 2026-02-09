@@ -126,6 +126,11 @@ model Player {
   tennisBallBackground  Boolean  @default(false)  // Previously played only tennis ball cricket
   yearsPlaying          Int?                       // Total years playing cricket
 
+  // League Format Availability
+  availableForT20       Boolean  @default(true)   // Available for T20 league
+  availableForT30       Boolean  @default(true)   // Available for T30 league
+  leaguePreferenceNotes String?                   // Notes about league preferences
+
   // Team Status
   captainChoice   Int      @default(2) // 1 = first choice, 2 = second, 3 = third
   isActive        Boolean  @default(true)

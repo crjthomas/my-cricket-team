@@ -125,6 +125,11 @@ export const typeDefs = gql`
     tennisBallBackground: Boolean!
     yearsPlaying: Int
     
+    # League Format Availability
+    availableForT20: Boolean!
+    availableForT30: Boolean!
+    leaguePreferenceNotes: String
+    
     # Team Status
     captainChoice: Int!
     isActive: Boolean!
@@ -554,6 +559,9 @@ export const typeDefs = gql`
     isRookie: Boolean
     tennisBallBackground: Boolean
     yearsPlaying: Int
+    availableForT20: Boolean
+    availableForT30: Boolean
+    leaguePreferenceNotes: String
     captainChoice: Int
     isWicketkeeper: Boolean
   }
@@ -585,6 +593,9 @@ export const typeDefs = gql`
     isRookie: Boolean
     tennisBallBackground: Boolean
     yearsPlaying: Int
+    availableForT20: Boolean
+    availableForT30: Boolean
+    leaguePreferenceNotes: String
     captainChoice: Int
     isActive: Boolean
     isWicketkeeper: Boolean
