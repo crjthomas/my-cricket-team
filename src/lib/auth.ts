@@ -4,7 +4,12 @@ import * as jwt from 'jsonwebtoken'
 import { UserRole } from '@prisma/client'
 import { cookies } from 'next/headers'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'phoenix-cricket-secret-key-change-in-production'
+// JWT_SECRET must be set in production - no fallback for security
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('JWT_SECRET environment variable is required in production')
+}
+const EFFECTIVE_JWT_SECRET = JWT_SECRET || 'dev-only-secret-do-not-use-in-production'
 const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000 // 7 days
 
 export interface AuthUser {
@@ -16,6 +21,26 @@ export interface AuthUser {
 export interface SessionPayload {
   userId: string
   sessionId: string
+}
+
+// Password validation - returns error message or null if valid
+export function validatePassword(password: string): string | null {
+  if (password.length < 8) {
+    return 'Password must be at least 8 characters'
+  }
+  if (password.length > 128) {
+    return 'Password must be 128 characters or less'
+  }
+  if (!/[a-z]/.test(password)) {
+    return 'Password must contain at least one lowercase letter'
+  }
+  if (!/[A-Z]/.test(password)) {
+    return 'Password must contain at least one uppercase letter'
+  }
+  if (!/[0-9]/.test(password)) {
+    return 'Password must contain at least one number'
+  }
+  return null // Valid
 }
 
 // Hash password
@@ -30,13 +55,13 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 
 // Create session token
 export function createToken(payload: SessionPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' })
+  return jwt.sign(payload, EFFECTIVE_JWT_SECRET, { expiresIn: '7d' })
 }
 
 // Verify token
 export function verifyToken(token: string): SessionPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as SessionPayload
+    return jwt.verify(token, EFFECTIVE_JWT_SECRET) as SessionPayload
   } catch {
     return null
   }
@@ -126,7 +151,7 @@ export async function getServerUser(): Promise<AuthUser | null> {
   return getCurrentUser(token)
 }
 
-// Change password
+// Change password - also invalidates all existing sessions for security
 export async function changePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -142,10 +167,18 @@ export async function changePassword(userId: string, currentPassword: string, ne
   }
 
   const newHash = await hashPassword(newPassword)
-  await prisma.user.update({
-    where: { id: userId },
-    data: { passwordHash: newHash },
-  })
+  
+  // Update password and invalidate all sessions in a transaction
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: newHash },
+    }),
+    // Invalidate all sessions for this user (security best practice)
+    prisma.session.deleteMany({
+      where: { userId },
+    }),
+  ])
 
   return true
 }

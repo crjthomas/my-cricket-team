@@ -173,7 +173,8 @@ export default function MatchesPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `mutation { deleteMatch(id: "${id}") }`,
+          query: `mutation DeleteMatch($id: ID!) { deleteMatch(id: $id) }`,
+          variables: { id },
         }),
       })
       fetchMatches()

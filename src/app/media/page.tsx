@@ -127,7 +127,8 @@ export default function MediaPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `mutation { deleteMedia(id: "${id}") }`,
+          query: `mutation DeleteMedia($id: ID!) { deleteMedia(id: $id) }`,
+          variables: { id },
         }),
       })
       fetchMedia()

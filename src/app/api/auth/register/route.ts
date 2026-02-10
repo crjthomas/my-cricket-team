@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createUser } from '@/lib/auth'
+import { createUser, validatePassword } from '@/lib/auth'
 import { UserRole } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
@@ -38,9 +38,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (password.length < 6) {
+    const passwordError = validatePassword(password)
+    if (passwordError) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters' },
+        { error: passwordError },
         { status: 400 }
       )
     }

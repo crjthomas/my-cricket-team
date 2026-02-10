@@ -173,7 +173,8 @@ export default function SeasonPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `mutation { deleteSeason(id: "${id}") }`,
+          query: `mutation DeleteSeason($id: ID!) { deleteSeason(id: $id) }`,
+          variables: { id },
         }),
       })
       fetchData()
@@ -188,7 +189,8 @@ export default function SeasonPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `mutation { updateSeason(id: "${id}", isActive: true) { id } }`,
+          query: `mutation SetActiveSeason($id: ID!) { updateSeason(id: $id, isActive: true) { id } }`,
+          variables: { id },
         }),
       })
       fetchData()

@@ -4,6 +4,27 @@ import { calculatePlayerRatingChanges, calculateAllPlayerRatingChanges, applyRat
 import { GraphQLScalarType, Kind } from 'graphql'
 import type { Player, SeasonStats, Match, Opponent, Season, Squad, SquadPlayer, PlayerAvailability, RatingHistory } from '@prisma/client'
 
+// Security: Validate URLs to prevent XSS via javascript: or data: URLs
+function isValidUrl(url: string): boolean {
+  if (!url) return true // Allow empty/null
+  try {
+    const parsed = new URL(url)
+    // Only allow http and https protocols
+    return ['http:', 'https:'].includes(parsed.protocol)
+  } catch {
+    // If it's a relative URL, that's okay
+    return !url.toLowerCase().startsWith('javascript:') && 
+           !url.toLowerCase().startsWith('data:') &&
+           !url.toLowerCase().startsWith('vbscript:')
+  }
+}
+
+// Security: Sanitize string input - trim and limit length
+function sanitizeString(str: string | undefined | null, maxLength: number = 1000): string | undefined {
+  if (!str) return undefined
+  return str.trim().slice(0, maxLength)
+}
+
 // DateTime scalar
 const dateTimeScalar = new GraphQLScalarType({
   name: 'DateTime',
@@ -1198,13 +1219,21 @@ export const resolvers = {
       _: unknown,
       { input }: { input: { type: string; url: string; thumbnailUrl?: string; title?: string; description?: string; duration?: number; matchId?: string } }
     ) => {
+      // Security: Validate URLs to prevent XSS
+      if (!isValidUrl(input.url)) {
+        throw new Error('Invalid URL: Only http and https URLs are allowed')
+      }
+      if (input.thumbnailUrl && !isValidUrl(input.thumbnailUrl)) {
+        throw new Error('Invalid thumbnail URL: Only http and https URLs are allowed')
+      }
+      
       const media = await prisma.media.create({
         data: {
           type: input.type as 'PHOTO' | 'VIDEO' | 'DOCUMENT',
           url: input.url,
           thumbnailUrl: input.thumbnailUrl,
-          title: input.title,
-          description: input.description,
+          title: sanitizeString(input.title, 200),
+          description: sanitizeString(input.description, 2000),
           duration: input.duration,
           matchId: input.matchId,
         },

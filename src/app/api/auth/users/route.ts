@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser, createUser, isAdmin } from '@/lib/auth'
+import { getCurrentUser, createUser, isAdmin, validatePassword } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { UserRole } from '@prisma/client'
 
@@ -61,9 +61,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (password.length < 6) {
+    const passwordError = validatePassword(password)
+    if (passwordError) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters' },
+        { error: passwordError },
+        { status: 400 }
+      )
+    }
+
+    // Username validation
+    if (username.length < 3 || username.length > 20) {
+      return NextResponse.json(
+        { error: 'Username must be between 3 and 20 characters' },
+        { status: 400 }
+      )
+    }
+    if (!/^[a-z0-9_]+$/.test(username)) {
+      return NextResponse.json(
+        { error: 'Username can only contain lowercase letters, numbers, and underscores' },
         { status: 400 }
       )
     }

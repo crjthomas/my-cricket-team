@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser, changePassword } from '@/lib/auth'
+import { getCurrentUser, changePassword, validatePassword } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,9 +31,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (newPassword.length < 6) {
+    const passwordError = validatePassword(newPassword)
+    if (passwordError) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters' },
+        { error: passwordError },
         { status: 400 }
       )
     }
