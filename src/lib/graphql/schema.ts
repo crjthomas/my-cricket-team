@@ -568,6 +568,8 @@ export const typeDefs = gql`
     leaguePreferenceNotes: String
     captainChoice: Int
     isWicketkeeper: Boolean
+    isCaptain: Boolean
+    isViceCaptain: Boolean
   }
 
   input UpdatePlayerInput {
@@ -603,6 +605,8 @@ export const typeDefs = gql`
     captainChoice: Int
     isActive: Boolean
     isWicketkeeper: Boolean
+    isCaptain: Boolean
+    isViceCaptain: Boolean
   }
 
   input AvailabilityInput {

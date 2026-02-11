@@ -223,9 +223,27 @@ const bowlingVariationOptions = [
 ]
 
 export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerFormProps) {
-  const [formData, setFormData] = useState<PlayerFormData>(
-    player ? { ...defaultFormData, ...player } : defaultFormData
-  )
+  const [formData, setFormData] = useState<PlayerFormData>(() => {
+    if (!player) return defaultFormData
+    return {
+      ...defaultFormData,
+      ...player,
+      // Ensure boolean fields are explicitly set (not undefined)
+      isCaptain: player.isCaptain ?? false,
+      isViceCaptain: player.isViceCaptain ?? false,
+      isWicketkeeper: player.isWicketkeeper ?? false,
+      isActive: player.isActive ?? true,
+      isRookie: player.isRookie ?? false,
+      tennisBallBackground: player.tennisBallBackground ?? false,
+      availableForT20: player.availableForT20 ?? true,
+      availableForT30: player.availableForT30 ?? true,
+      // Ensure arrays are not null
+      preferredFieldingPositions: player.preferredFieldingPositions ?? [],
+      bowlingVariations: player.bowlingVariations ?? [],
+      previousTeams: player.previousTeams ?? [],
+      injuryHistory: player.injuryHistory ?? [],
+    }
+  })
   const [error, setError] = useState('')
   const [newPreviousTeam, setNewPreviousTeam] = useState('')
   const [newInjury, setNewInjury] = useState('')
@@ -233,7 +251,24 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
   // Update form data when player prop changes (e.g., after async fetch)
   useEffect(() => {
     if (player) {
-      setFormData({ ...defaultFormData, ...player })
+      setFormData({
+        ...defaultFormData,
+        ...player,
+        // Ensure boolean fields are explicitly set (not undefined)
+        isCaptain: player.isCaptain ?? false,
+        isViceCaptain: player.isViceCaptain ?? false,
+        isWicketkeeper: player.isWicketkeeper ?? false,
+        isActive: player.isActive ?? true,
+        isRookie: player.isRookie ?? false,
+        tennisBallBackground: player.tennisBallBackground ?? false,
+        availableForT20: player.availableForT20 ?? true,
+        availableForT30: player.availableForT30 ?? true,
+        // Ensure arrays are not null
+        preferredFieldingPositions: player.preferredFieldingPositions ?? [],
+        bowlingVariations: player.bowlingVariations ?? [],
+        previousTeams: player.previousTeams ?? [],
+        injuryHistory: player.injuryHistory ?? [],
+      })
     }
   }, [player])
 

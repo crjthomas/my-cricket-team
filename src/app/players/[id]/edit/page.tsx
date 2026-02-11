@@ -210,6 +210,11 @@ export default function EditPlayerPage() {
               yearsPlaying: data.yearsPlaying,
               captainChoice: data.captainChoice,
               isWicketkeeper: data.isWicketkeeper,
+              isCaptain: data.isCaptain,
+              isViceCaptain: data.isViceCaptain,
+              availableForT20: data.availableForT20,
+              availableForT30: data.availableForT30,
+              leaguePreferenceNotes: data.leaguePreferenceNotes,
               isActive: data.isActive,
             }
           }

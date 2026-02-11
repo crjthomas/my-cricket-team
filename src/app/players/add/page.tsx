@@ -36,8 +36,28 @@ export default function AddPlayerPage() {
     bowlingSkill: number
     fieldingSkill: number
     experienceLevel: number
+    powerHitting: number
+    runningBetweenWickets: number
+    pressureHandling: number
+    fitnessLevel: number
+    currentInjuryStatus: string
+    preferredFieldingPositions: string[]
+    bowlingVariations: string[]
+    reliabilityScore: number
+    trainingAttendance: number | null
+    previousTeams: string[]
+    injuryHistory: string[]
+    isRookie: boolean
+    tennisBallBackground: boolean
+    yearsPlaying: number | null
+    availableForT20: boolean
+    availableForT30: boolean
+    leaguePreferenceNotes: string
     captainChoice: number
     isWicketkeeper: boolean
+    isCaptain: boolean
+    isViceCaptain: boolean
+    isActive: boolean
   }) => {
     setIsLoading(true)
     try {
@@ -65,8 +85,27 @@ export default function AddPlayerPage() {
               bowlingSkill: data.bowlingSkill,
               fieldingSkill: data.fieldingSkill,
               experienceLevel: data.experienceLevel,
+              powerHitting: data.powerHitting,
+              runningBetweenWickets: data.runningBetweenWickets,
+              pressureHandling: data.pressureHandling,
+              fitnessLevel: data.fitnessLevel,
+              currentInjuryStatus: data.currentInjuryStatus,
+              preferredFieldingPositions: data.preferredFieldingPositions,
+              bowlingVariations: data.bowlingVariations,
+              reliabilityScore: data.reliabilityScore,
+              trainingAttendance: data.trainingAttendance,
+              previousTeams: data.previousTeams,
+              injuryHistory: data.injuryHistory,
+              isRookie: data.isRookie,
+              tennisBallBackground: data.tennisBallBackground,
+              yearsPlaying: data.yearsPlaying,
+              availableForT20: data.availableForT20,
+              availableForT30: data.availableForT30,
+              leaguePreferenceNotes: data.leaguePreferenceNotes,
               captainChoice: data.captainChoice,
               isWicketkeeper: data.isWicketkeeper,
+              isCaptain: data.isCaptain,
+              isViceCaptain: data.isViceCaptain,
             }
           }
         }),
