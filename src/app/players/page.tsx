@@ -46,6 +46,7 @@ interface Player {
   captainChoice: number
   isCaptain: boolean
   isWicketkeeper?: boolean
+  isActive: boolean
   currentSeasonStats?: {
     matchesPlayed: number
     matchesAvailable: number
@@ -57,11 +58,13 @@ interface Player {
 }
 
 const roleFilters = ['ALL', 'BATSMAN', 'BOWLER', 'ALL_ROUNDER', 'WICKETKEEPER']
+const statusFilters = ['All Players', 'Active Only', 'Inactive Only']
 
 export default function PlayersPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('ALL')
+  const [statusFilter, setStatusFilter] = useState('All Players')
   const [sortBy, setSortBy] = useState<'name' | 'runs' | 'wickets' | 'form'>('name')
   const [players, setPlayers] = useState<Player[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -107,7 +110,7 @@ export default function PlayersPage() {
         body: JSON.stringify({
           query: `
             query GetPlayers {
-              players(activeOnly: true) {
+              players(activeOnly: false) {
                 id
                 name
                 jerseyNumber
@@ -121,6 +124,7 @@ export default function PlayersPage() {
                 captainChoice
                 isCaptain
                 isWicketkeeper
+                isActive
                 currentSeasonStats {
                   matchesPlayed
                   matchesAvailable
@@ -160,7 +164,11 @@ export default function PlayersPage() {
       const matchesRole = roleFilter === 'ALL' || 
         player.primaryRole === roleFilter ||
         (roleFilter === 'WICKETKEEPER' && player.isWicketkeeper)
-      return matchesSearch && matchesRole
+      // Status filter
+      const matchesStatus = statusFilter === 'All Players' ||
+        (statusFilter === 'Active Only' && player.isActive) ||
+        (statusFilter === 'Inactive Only' && !player.isActive)
+      return matchesSearch && matchesRole && matchesStatus
     })
     .sort((a, b) => {
       const statsA = getStats(a)
@@ -206,8 +214,13 @@ export default function PlayersPage() {
               <Users className="h-5 w-5 text-pitch-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{players.length}</p>
-              <p className="text-sm text-muted-foreground">Total Players</p>
+              <p className="text-2xl font-bold">
+                {players.filter(p => p.isActive).length}
+                <span className="text-sm font-normal text-muted-foreground ml-1">
+                  / {players.length}
+                </span>
+              </p>
+              <p className="text-sm text-muted-foreground">Active Players</p>
             </div>
           </CardContent>
         </Card>
@@ -269,7 +282,7 @@ export default function PlayersPage() {
                 className="h-10 w-full rounded-lg border bg-background pl-10 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {roleFilters.map((role) => (
                 <Button
                   key={role}
@@ -277,14 +290,25 @@ export default function PlayersPage() {
                   size="sm"
                   onClick={() => setRoleFilter(role)}
                 >
-                  {role === 'ALL' ? 'All' : role.replace('_', ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase())}
+                  {role === 'ALL' ? 'All Roles' : role.replace('_', ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase())}
                 </Button>
               ))}
             </div>
-            <Button variant="outline" size="sm" className="gap-2">
-              <ArrowUpDown className="h-4 w-4" />
-              Sort
-            </Button>
+            <div className="flex gap-2">
+              {statusFilters.map((status) => (
+                <Button
+                  key={status}
+                  variant={statusFilter === status ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setStatusFilter(status)}
+                  className={cn(
+                    statusFilter === status && 'bg-gray-200 dark:bg-gray-700'
+                  )}
+                >
+                  {status}
+                </Button>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -318,7 +342,8 @@ export default function PlayersPage() {
               glow 
               className={cn(
                 'cursor-pointer hover:shadow-lg transition-all duration-200',
-                `stagger-${(index % 5) + 1} animate-slide-up`
+                `stagger-${(index % 5) + 1} animate-slide-up`,
+                !player.isActive && 'opacity-60'
               )}
             >
               <CardContent className="p-6">
@@ -389,12 +414,17 @@ export default function PlayersPage() {
                         <Badge className={getRoleColor(player.primaryRole)}>
                           {player.primaryRole.replace(/_/g, ' ')}
                         </Badge>
-                        {stats.currentForm !== 'UNKNOWN' && (
+                        {!player.isActive && (
+                          <Badge variant="secondary" className="bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                            Inactive
+                          </Badge>
+                        )}
+                        {stats.currentForm !== 'UNKNOWN' && player.isActive && (
                           <Badge className={getFormColor(stats.currentForm)}>
                             {stats.currentForm}
                           </Badge>
                         )}
-                        {player.captainChoice === 1 && (
+                        {player.captainChoice === 1 && player.isActive && (
                           <Badge variant="outline" className="gap-1">
                             <Star className="h-3 w-3" /> 1st Choice
                           </Badge>
