@@ -166,11 +166,16 @@ export default function PracticeMatchPage() {
       'WICKETKEEPER': 2.5,
       'ALL_ROUNDER': 3,
       'BOWLING_ALL_ROUNDER': 4,
-      'BOWLER': 5,
+      'BOWLER': 10, // Pure bowlers bat last
     }
     
     const scoredPlayers = team.map(player => {
       let score = 0
+      
+      // Pure bowlers should always bat last - add massive penalty
+      if (player.primaryRole === 'BOWLER') {
+        score += 1000 // Ensure bowlers are always last
+      }
       
       // Position is primary factor
       score += (positionPriority[player.battingPosition] || 3) * 100

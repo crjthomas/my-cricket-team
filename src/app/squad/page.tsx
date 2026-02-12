@@ -131,12 +131,17 @@ const assignBattingOrder = (selectedPlayers: Player[]): Player[] => {
     'WICKETKEEPER': 2.5,
     'ALL_ROUNDER': 3,
     'BOWLING_ALL_ROUNDER': 4,
-    'BOWLER': 5,
+    'BOWLER': 10, // Pure bowlers bat at 10/11
   }
   
   // Calculate batting order score (lower = bats earlier)
   const scoredPlayers = selectedPlayers.map(player => {
     let score = 0
+    
+    // Pure bowlers should always bat at 10/11 - add massive penalty
+    if (player.primaryRole === 'BOWLER') {
+      score += 1000 // Ensure bowlers are always last
+    }
     
     // Position is the primary factor
     score += (positionPriority[player.battingPosition] || 3) * 100
