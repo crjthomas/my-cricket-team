@@ -196,15 +196,89 @@ export default function SquadSelectorPage() {
   const [aiWarnings, setAiWarnings] = useState<string[]>([])
   const [winProbability, setWinProbability] = useState<number>(0)
   const [fairnessScore, setFairnessScore] = useState<number>(0)
+  const [isSavedSquad, setIsSavedSquad] = useState(false)
 
   // Filter players available for the selected match format
   const availablePlayers = selectedMatch 
     ? players.filter(p => isPlayerAvailableForFormat(p, getMatchFormat(selectedMatch)))
     : players
 
+  // Helper function for role descriptions
+  const getRoleDescription = (role: string, order: number) => {
+    if (role === 'WICKETKEEPER') return 'Wicketkeeper-batsman'
+    if (role === 'ALL_ROUNDER' || role === 'BATTING_ALL_ROUNDER' || role === 'BOWLING_ALL_ROUNDER') return 'All-rounder'
+    if (order < 3) return 'Opening batsman'
+    if (order < 5) return 'Top order'
+    if (order < 7) return 'Middle order'
+    if (role === 'BOWLER') return 'Pace/Spin bowler'
+    return 'Lower order'
+  }
+
   useEffect(() => {
     fetchData()
   }, [])
+
+  // Fetch saved squad when match is selected
+  const fetchSavedSquad = async (matchId: string) => {
+    try {
+      const res = await fetch('/api/graphql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            query GetSquad($matchId: String!) {
+              squad(matchId: $matchId) {
+                id
+                selectionMode
+                aiReasoning
+                winProbability
+                fairnessScore
+                players {
+                  playerId
+                  battingOrder
+                  roleInMatch
+                  selectionReason
+                  player {
+                    id name jerseyNumber primaryRole
+                  }
+                }
+              }
+            }
+          `,
+          variables: { matchId }
+        }),
+      })
+      const { data } = await res.json()
+      if (data?.squad && data.squad.players?.length > 0) {
+        // Load saved squad
+        const savedPlayers: SelectedPlayer[] = data.squad.players
+          .sort((a: { battingOrder: number }, b: { battingOrder: number }) => a.battingOrder - b.battingOrder)
+          .map((sp: { player: { id: string; name: string; jerseyNumber?: number; primaryRole: string }; battingOrder: number; roleInMatch?: string; selectionReason?: string }) => ({
+            id: sp.player.id,
+            name: sp.player.name,
+            jerseyNumber: sp.player.jerseyNumber,
+            role: sp.player.primaryRole,
+            battingOrder: sp.battingOrder,
+            roleInMatch: sp.roleInMatch || getRoleDescription(sp.player.primaryRole, sp.battingOrder),
+            selectionReason: sp.selectionReason || 'Previously selected',
+            form: 'AVERAGE',
+            matchesPlayed: 0,
+            matchesAvailable: 0,
+          }))
+        setSelectedSquad(savedPlayers)
+        setAiReasoning(data.squad.aiReasoning || 'Previously saved squad')
+        setWinProbability(data.squad.winProbability || 0)
+        setFairnessScore(data.squad.fairnessScore || 0)
+        setAiInsights(['Loaded previously saved squad'])
+        setIsSavedSquad(true)
+        return true
+      }
+      return false
+    } catch (error) {
+      console.error('Failed to fetch saved squad:', error)
+      return false
+    }
+  }
 
   const fetchData = async () => {
     try {
@@ -236,15 +310,30 @@ export default function SquadSelectorPage() {
       setMatches(data?.upcomingMatches || [])
       setPlayers(data?.players || [])
       
-      // Auto-select first match if available
+      // Auto-select first match if available and load saved squad
       if (data?.upcomingMatches?.length > 0 && !selectedMatch) {
-        setSelectedMatch(data.upcomingMatches[0])
+        const firstMatch = data.upcomingMatches[0]
+        setSelectedMatch(firstMatch)
+        // Try to load saved squad for this match
+        await fetchSavedSquad(firstMatch.id)
       }
     } catch (error) {
       console.error('Failed to fetch data:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  // Handle match selection change
+  const handleMatchSelect = async (match: Match) => {
+    setSelectedMatch(match)
+    setSelectedSquad([])
+    setAiReasoning('')
+    setAiInsights([])
+    setAiWarnings([])
+    setIsSavedSquad(false)
+    // Try to load saved squad for this match
+    await fetchSavedSquad(match.id)
   }
 
   const handleGenerateSquad = async () => {
@@ -289,6 +378,7 @@ export default function SquadSelectorPage() {
       }))
 
       setSelectedSquad(selected)
+      setIsSavedSquad(false)
       setWinProbability(60 + Math.floor(Math.random() * 20))
       setFairnessScore(70 + Math.floor(Math.random() * 20))
       setAiReasoning(`This squad is optimized for the match against ${selectedMatch.opponent.name}. 
@@ -365,16 +455,6 @@ The ${selectionMode.toLowerCase().replace('_', ' ')} approach prioritizes ${
     } finally {
       setSaving(false)
     }
-  }
-
-  const getRoleDescription = (role: string, order: number) => {
-    if (role === 'WICKETKEEPER') return 'Wicketkeeper-batsman'
-    if (role === 'ALL_ROUNDER') return 'All-rounder'
-    if (order < 3) return 'Opening batsman'
-    if (order < 5) return 'Top order'
-    if (order < 7) return 'Middle order'
-    if (role === 'BOWLER') return 'Pace/Spin bowler'
-    return 'Lower order'
   }
 
   const getSelectionReason = (player: Player, mode: SelectionMode) => {
@@ -495,10 +575,7 @@ The ${selectionMode.toLowerCase().replace('_', ' ')} approach prioritizes ${
           {matches.map((match) => (
             <button
               key={match.id}
-              onClick={() => {
-                setSelectedMatch(match)
-                setSelectedSquad([])
-              }}
+              onClick={() => handleMatchSelect(match)}
               className={cn(
                 'flex-shrink-0 px-4 py-2 rounded-lg border text-sm transition-colors',
                 selectedMatch?.id === match.id
@@ -617,8 +694,17 @@ The ${selectionMode.toLowerCase().replace('_', ' ')} approach prioritizes ${
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg">Selected XI</CardTitle>
-                  <CardDescription>AI-recommended squad with reasoning</CardDescription>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    Selected XI
+                    {isSavedSquad && (
+                      <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-normal">
+                        Saved
+                      </span>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    {isSavedSquad ? 'Previously saved squad' : 'AI-recommended squad with reasoning'}
+                  </CardDescription>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-center">
