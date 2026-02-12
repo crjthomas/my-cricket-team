@@ -207,6 +207,8 @@ model Season {
   endDate     DateTime?
   isActive    Boolean  @default(true)
   description String?
+  format      MatchFormat @default(T20)  // Default format for the season
+  overs       Int         @default(20)   // Number of overs per innings
 
   // Stats
   totalMatches    Int @default(0)
@@ -283,6 +285,14 @@ enum PlayerForm {
   POOR
 }
 
+enum MatchFormat {
+  T20
+  T30
+  T10
+  ODI    // 50 overs
+  OTHER
+}
+
 // ============================================
 // MATCH MANAGEMENT
 // ============================================
@@ -297,6 +307,8 @@ model Match {
   matchNumber Int?
   matchType   MatchType @default(LEAGUE)
   status      MatchStatus @default(UPCOMING)
+  format      MatchFormat?  // If null, inherits from season
+  overs       Int?          // If null, inherits from season
 
   // Opponent Info
   opponentId String

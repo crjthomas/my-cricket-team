@@ -29,6 +29,8 @@ interface Season {
   endDate?: string
   isActive: boolean
   description?: string
+  format: string
+  overs: number
   totalMatches: number
   matchesPlayed: number
   wins: number
@@ -74,12 +76,12 @@ export default function SeasonPage() {
           query: `
             query {
               seasons {
-                id name startDate endDate isActive description
+                id name startDate endDate isActive description format overs
                 totalMatches matchesPlayed wins losses draws noResults
                 currentPosition totalTeams
               }
               activeSeason {
-                id name startDate endDate isActive description
+                id name startDate endDate isActive description format overs
                 totalMatches matchesPlayed wins losses draws noResults
                 currentPosition totalTeams
               }
@@ -108,6 +110,8 @@ export default function SeasonPage() {
     startDate: string
     endDate: string
     description: string
+    format: string
+    overs: number
     totalMatches: number
     totalTeams: number
     isActive: boolean
@@ -128,6 +132,8 @@ export default function SeasonPage() {
               $startDate: DateTime!
               $endDate: DateTime
               $description: String
+              $format: MatchFormat
+              $overs: Int
               $totalMatches: Int
               $totalTeams: Int
               $isActive: Boolean
@@ -138,6 +144,8 @@ export default function SeasonPage() {
                 startDate: $startDate
                 endDate: $endDate
                 description: $description
+                format: $format
+                overs: $overs
                 totalMatches: $totalMatches
                 totalTeams: $totalTeams
                 isActive: $isActive
@@ -225,6 +233,8 @@ export default function SeasonPage() {
             startDate: editingSeason.startDate.split('T')[0],
             endDate: editingSeason.endDate?.split('T')[0] || '',
             description: editingSeason.description || '',
+            format: editingSeason.format || 'T20',
+            overs: editingSeason.overs || 20,
             totalMatches: editingSeason.totalMatches,
             totalTeams: editingSeason.totalTeams || 8,
             isActive: editingSeason.isActive,
@@ -291,6 +301,11 @@ export default function SeasonPage() {
               className="flex items-center gap-2 text-3xl font-bold tracking-tight hover:text-primary transition-colors"
             >
               {displaySeason?.name}
+              {displaySeason?.format && (
+                <Badge variant="outline" className="text-sm font-normal ml-2">
+                  {displaySeason.format} ({displaySeason.overs} overs)
+                </Badge>
+              )}
               {seasons.length > 1 && <ChevronDown className="h-5 w-5" />}
             </button>
             {showSeasonDropdown && seasons.length > 1 && (

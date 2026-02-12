@@ -327,6 +327,7 @@ export const resolvers = {
         include: {
           opponent: true,
           venue: true,
+          season: true,
         },
         orderBy: { matchDate: 'asc' },
         take: limit || 5,
@@ -891,6 +892,8 @@ export const resolvers = {
         venueId: string
         seasonId: string
         importance?: string
+        format?: 'T20' | 'T30' | 'T10' | 'ODI' | 'OTHER'
+        overs?: number
         captainNotes?: string
       }
     ) => {
@@ -905,6 +908,8 @@ export const resolvers = {
           seasonId: args.seasonId,
           matchNumber: matchCount + 1,
           importance: (args.importance as 'MUST_WIN' | 'IMPORTANT' | 'REGULAR' | 'LOW_STAKES') || 'REGULAR',
+          format: args.format || undefined, // null means inherit from season
+          overs: args.overs || undefined,   // null means inherit from season
           captainNotes: args.captainNotes,
         },
         include: {
@@ -1119,6 +1124,8 @@ export const resolvers = {
         startDate: Date
         endDate?: Date
         description?: string
+        format?: 'T20' | 'T30' | 'T10' | 'ODI' | 'OTHER'
+        overs?: number
         totalMatches?: number
         totalTeams?: number
         isActive?: boolean
@@ -1132,12 +1139,25 @@ export const resolvers = {
         })
       }
 
+      // Determine overs based on format if not explicitly provided
+      const getDefaultOvers = (format?: string) => {
+        switch (format) {
+          case 'T10': return 10
+          case 'T20': return 20
+          case 'T30': return 30
+          case 'ODI': return 50
+          default: return 20
+        }
+      }
+
       const season = await prisma.season.create({
         data: {
           name: args.name,
           startDate: args.startDate,
           endDate: args.endDate,
           description: args.description,
+          format: args.format || 'T20',
+          overs: args.overs || getDefaultOvers(args.format),
           totalMatches: args.totalMatches || 12,
           totalTeams: args.totalTeams || 8,
           isActive: args.isActive ?? true,
@@ -1165,6 +1185,8 @@ export const resolvers = {
         startDate?: Date
         endDate?: Date
         description?: string
+        format?: 'T20' | 'T30' | 'T10' | 'ODI' | 'OTHER'
+        overs?: number
         totalMatches?: number
         totalTeams?: number
         isActive?: boolean
@@ -1186,6 +1208,8 @@ export const resolvers = {
       if (data.startDate !== undefined) updateData.startDate = data.startDate
       if (data.endDate !== undefined) updateData.endDate = data.endDate
       if (data.description !== undefined) updateData.description = data.description
+      if (data.format !== undefined) updateData.format = data.format
+      if (data.overs !== undefined) updateData.overs = data.overs
       if (data.totalMatches !== undefined) updateData.totalMatches = data.totalMatches
       if (data.totalTeams !== undefined) updateData.totalTeams = data.totalTeams
       if (data.isActive !== undefined) updateData.isActive = data.isActive
@@ -1213,6 +1237,8 @@ export const resolvers = {
         id: string
         matchDate?: Date
         importance?: string
+        format?: 'T20' | 'T30' | 'T10' | 'ODI' | 'OTHER'
+        overs?: number
         captainNotes?: string
         status?: string
       }
@@ -1221,6 +1247,8 @@ export const resolvers = {
       const updateData: Record<string, unknown> = {}
       if (data.matchDate !== undefined) updateData.matchDate = data.matchDate
       if (data.importance !== undefined) updateData.importance = data.importance
+      if (data.format !== undefined) updateData.format = data.format
+      if (data.overs !== undefined) updateData.overs = data.overs
       if (data.captainNotes !== undefined) updateData.captainNotes = data.captainNotes
       if (data.status !== undefined) updateData.status = data.status
 

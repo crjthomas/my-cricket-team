@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -43,6 +43,13 @@ export function OpponentForm({ opponent, onSubmit, onCancel, isLoading }: Oppone
   )
   const [newKeyPlayer, setNewKeyPlayer] = useState('')
   const [error, setError] = useState('')
+
+  // Sync formData when opponent prop changes
+  useEffect(() => {
+    if (opponent) {
+      setFormData({ ...opponent })
+    }
+  }, [opponent])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

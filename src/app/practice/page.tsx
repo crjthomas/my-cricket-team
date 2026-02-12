@@ -39,6 +39,7 @@ interface Player {
   pressureHandling: number
   battingStyle: string
   bowlingStyle: string
+  battingPosition: string
   seasonStats?: {
     matchesPlayed: number
     matchesAvailable: number
@@ -48,6 +49,7 @@ interface Player {
 
 interface TeamPlayer extends Player {
   overallRating: number
+  battingOrder?: number
 }
 
 export default function PracticeMatchPage() {
@@ -97,6 +99,7 @@ export default function PracticeMatchPage() {
                 pressureHandling
                 battingStyle
                 bowlingStyle
+                battingPosition
                 seasonStats {
                   matchesPlayed
                   matchesAvailable
@@ -143,6 +146,65 @@ export default function PracticeMatchPage() {
         rating = (player.battingSkill + player.bowlingSkill + player.fieldingSkill + player.experienceLevel) / 4
     }
     return Math.round(rating * 10) / 10
+  }
+
+  // Assign batting order to team players based on their attributes
+  const assignBattingOrderToTeam = (team: TeamPlayer[]): TeamPlayer[] => {
+    // Batting position priority (lower = bats earlier)
+    const positionPriority: Record<string, number> = {
+      'OPENER': 1,
+      'TOP_ORDER': 2,
+      'MIDDLE_ORDER': 3,
+      'LOWER_ORDER': 4,
+      'FINISHER': 5,
+    }
+    
+    // Role priority for batting order
+    const rolePriority: Record<string, number> = {
+      'BATSMAN': 1,
+      'BATTING_ALL_ROUNDER': 2,
+      'WICKETKEEPER': 2.5,
+      'ALL_ROUNDER': 3,
+      'BOWLING_ALL_ROUNDER': 4,
+      'BOWLER': 5,
+    }
+    
+    const scoredPlayers = team.map(player => {
+      let score = 0
+      
+      // Position is primary factor
+      score += (positionPriority[player.battingPosition] || 3) * 100
+      
+      // Role affects order within position
+      score += (rolePriority[player.primaryRole] || 3) * 10
+      
+      // Better batting skill = bat earlier
+      score -= player.battingSkill * 5
+      
+      // Experience helps
+      score -= player.experienceLevel * 2
+      
+      // Captain/Vice Captain in key positions
+      if (player.isCaptain || player.isViceCaptain) {
+        score -= 15
+      }
+      
+      // Form bonus
+      const form = player.seasonStats?.currentForm || 'AVERAGE'
+      if (form === 'EXCELLENT') score -= 10
+      else if (form === 'GOOD') score -= 5
+      else if (form === 'POOR') score += 10
+      
+      return { player, score }
+    })
+    
+    // Sort by score (lower = earlier in batting order)
+    scoredPlayers.sort((a, b) => a.score - b.score)
+    
+    return scoredPlayers.map((sp, index) => ({
+      ...sp.player,
+      battingOrder: index + 1
+    }))
   }
 
   const togglePlayer = (playerId: string) => {
@@ -406,8 +468,9 @@ export default function PracticeMatchPage() {
     }
     
     setTimeout(() => {
-      setTeamA(newTeamA)
-      setTeamB(newTeamB)
+      // Assign batting orders based on player attributes
+      setTeamA(assignBattingOrderToTeam(newTeamA))
+      setTeamB(assignBattingOrderToTeam(newTeamB))
       setHasSplit(true)
       setIsSplitting(false)
     }, 500)
@@ -623,8 +686,9 @@ export default function PracticeMatchPage() {
     }
 
     setTimeout(() => {
-      setTeamA(newTeamA)
-      setTeamB(newTeamB)
+      // Assign batting orders based on player attributes
+      setTeamA(assignBattingOrderToTeam(newTeamA))
+      setTeamB(assignBattingOrderToTeam(newTeamB))
       setHasSplit(true)
       setIsAiSplitting(false)
     }, 800) // Slightly longer delay to show AI is "thinking"
@@ -632,11 +696,17 @@ export default function PracticeMatchPage() {
 
   const swapPlayer = (player: TeamPlayer, fromTeam: 'A' | 'B') => {
     if (fromTeam === 'A') {
-      setTeamA(prev => prev.filter(p => p.id !== player.id))
-      setTeamB(prev => [...prev, player])
+      const newTeamA = teamA.filter(p => p.id !== player.id)
+      const newTeamB = [...teamB, player]
+      // Recalculate batting orders for both teams
+      setTeamA(assignBattingOrderToTeam(newTeamA))
+      setTeamB(assignBattingOrderToTeam(newTeamB))
     } else {
-      setTeamB(prev => prev.filter(p => p.id !== player.id))
-      setTeamA(prev => [...prev, player])
+      const newTeamB = teamB.filter(p => p.id !== player.id)
+      const newTeamA = [...teamA, player]
+      // Recalculate batting orders for both teams
+      setTeamA(assignBattingOrderToTeam(newTeamA))
+      setTeamB(assignBattingOrderToTeam(newTeamB))
     }
   }
 
@@ -949,15 +1019,18 @@ export default function PracticeMatchPage() {
                     {teamAStats.batsmen}B / {teamAStats.bowlers}Bw / {teamAStats.allRounders}AR / {teamAStats.wicketkeepers}WK
                   </span>
                 </div>
+                <p className="text-xs text-muted-foreground mt-1 italic">
+                  # = Batting order (based on position, role, skill & form)
+                </p>
               </CardHeader>
               <CardContent className="space-y-2">
-                {teamA.map((player, index) => (
+                {teamA.map((player) => (
                   <div 
                     key={player.id}
                     className="flex items-center justify-between p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-blue-600 w-6">{index + 1}</span>
+                      <span className="text-sm font-bold text-blue-600 w-8 text-center bg-blue-100 dark:bg-blue-800 rounded px-1" title="Batting Order">#{player.battingOrder || '-'}</span>
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="bg-blue-500 text-white text-xs">
                           {player.name.split(' ').map(n => n[0]).join('')}
@@ -1011,15 +1084,18 @@ export default function PracticeMatchPage() {
                     {teamBStats.batsmen}B / {teamBStats.bowlers}Bw / {teamBStats.allRounders}AR / {teamBStats.wicketkeepers}WK
                   </span>
                 </div>
+                <p className="text-xs text-muted-foreground mt-1 italic">
+                  # = Batting order (based on position, role, skill & form)
+                </p>
               </CardHeader>
               <CardContent className="space-y-2">
-                {teamB.map((player, index) => (
+                {teamB.map((player) => (
                   <div 
                     key={player.id}
                     className="flex items-center justify-between p-2 rounded-lg bg-green-50 dark:bg-green-900/20"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-green-600 w-6">{index + 1}</span>
+                      <span className="text-sm font-bold text-green-600 w-8 text-center bg-green-100 dark:bg-green-800 rounded px-1" title="Batting Order">#{player.battingOrder || '-'}</span>
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="bg-green-500 text-white text-xs">
                           {player.name.split(' ').map(n => n[0]).join('')}

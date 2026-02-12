@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Save, X } from 'lucide-react'
@@ -10,6 +10,8 @@ interface SeasonFormData {
   startDate: string
   endDate: string
   description: string
+  format: string
+  overs: number
   totalMatches: number
   totalTeams: number
   isActive: boolean
@@ -22,11 +24,21 @@ interface SeasonFormProps {
   isLoading?: boolean
 }
 
+const formatOptions = [
+  { value: 'T20', label: 'T20 (20 overs)', overs: 20 },
+  { value: 'T30', label: 'T30 (30 overs)', overs: 30 },
+  { value: 'T10', label: 'T10 (10 overs)', overs: 10 },
+  { value: 'ODI', label: 'ODI (50 overs)', overs: 50 },
+  { value: 'OTHER', label: 'Other', overs: 20 },
+]
+
 const defaultFormData: SeasonFormData = {
   name: '',
   startDate: new Date().toISOString().split('T')[0],
   endDate: '',
   description: '',
+  format: 'T20',
+  overs: 20,
   totalMatches: 12,
   totalTeams: 8,
   isActive: true,
@@ -37,6 +49,13 @@ export function SeasonForm({ season, onSubmit, onCancel, isLoading }: SeasonForm
     season ? { ...season } : defaultFormData
   )
   const [error, setError] = useState('')
+
+  // Sync formData when season prop changes
+  useEffect(() => {
+    if (season) {
+      setFormData({ ...season })
+    }
+  }, [season])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -103,6 +122,38 @@ export function SeasonForm({ season, onSubmit, onCancel, isLoading }: SeasonForm
                 value={formData.endDate}
                 onChange={(e) => updateField('endDate', e.target.value)}
                 className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium">Match Format *</label>
+              <select
+                value={formData.format}
+                onChange={(e) => {
+                  const selectedFormat = formatOptions.find(f => f.value === e.target.value)
+                  updateField('format', e.target.value)
+                  if (selectedFormat) {
+                    updateField('overs', selectedFormat.overs)
+                  }
+                }}
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                {formatOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Overs per Innings</label>
+              <input
+                type="number"
+                value={formData.overs}
+                onChange={(e) => updateField('overs', parseInt(e.target.value) || 20)}
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                min="1"
+                max="50"
               />
             </div>
           </div>

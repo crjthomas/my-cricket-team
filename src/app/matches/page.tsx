@@ -27,6 +27,8 @@ interface Match {
   matchDate: string
   status: string
   importance: string
+  format?: string
+  overs?: number
   result?: string
   ourScore?: string
   opponentScore?: string
@@ -47,6 +49,8 @@ interface Match {
   season: {
     id: string
     name: string
+    format?: string
+    overs?: number
   }
 }
 
@@ -65,6 +69,7 @@ export default function MatchesPage() {
   const [matches, setMatches] = useState<Match[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [editingMatch, setEditingMatch] = useState<Match | null>(null)
   const [saving, setSaving] = useState(false)
   const [stats, setStats] = useState<SeasonStats>({ wins: 0, losses: 0, draws: 0, remaining: 0 })
 
@@ -81,11 +86,11 @@ export default function MatchesPage() {
           query: `
             query {
               matches {
-                id matchNumber matchDate status importance
+                id matchNumber matchDate status importance format overs
                 result ourScore opponentScore marginOfVictory manOfMatch captainNotes
                 opponent { id name shortName overallStrength }
                 venue { id name city }
-                season { id name }
+                season { id name format overs }
               }
               activeSeason {
                 wins losses draws totalMatches matchesPlayed
@@ -117,49 +122,98 @@ export default function MatchesPage() {
     venueId: string
     seasonId: string
     importance: string
+    format: string
+    overs: number | null
     captainNotes: string
   }) => {
     setSaving(true)
     try {
-      await fetch('/api/graphql', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `
-            mutation CreateMatch(
-              $matchDate: DateTime!
-              $opponentId: String!
-              $venueId: String!
-              $seasonId: String!
-              $importance: MatchImportance
-              $captainNotes: String
-            ) {
-              createMatch(
-                matchDate: $matchDate
-                opponentId: $opponentId
-                venueId: $venueId
-                seasonId: $seasonId
-                importance: $importance
-                captainNotes: $captainNotes
+      if (editingMatch) {
+        // Update existing match
+        await fetch('/api/graphql', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: `
+              mutation UpdateMatch(
+                $id: ID!
+                $matchDate: DateTime
+                $importance: MatchImportance
+                $format: MatchFormat
+                $overs: Int
+                $captainNotes: String
               ) {
-                id
+                updateMatch(
+                  id: $id
+                  matchDate: $matchDate
+                  importance: $importance
+                  format: $format
+                  overs: $overs
+                  captainNotes: $captainNotes
+                ) {
+                  id
+                }
               }
-            }
-          `,
-          variables: {
-            matchDate: new Date(formData.matchDate).toISOString(),
-            opponentId: formData.opponentId,
-            venueId: formData.venueId,
-            seasonId: formData.seasonId,
-            importance: formData.importance,
-            captainNotes: formData.captainNotes || null,
-          },
-        }),
-      })
+            `,
+            variables: {
+              id: editingMatch.id,
+              matchDate: new Date(formData.matchDate).toISOString(),
+              importance: formData.importance,
+              format: formData.format || null,
+              overs: formData.overs,
+              captainNotes: formData.captainNotes || null,
+            },
+          }),
+        })
+      } else {
+        // Create new match
+        await fetch('/api/graphql', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: `
+              mutation CreateMatch(
+                $matchDate: DateTime!
+                $opponentId: String!
+                $venueId: String!
+                $seasonId: String!
+                $importance: MatchImportance
+                $format: MatchFormat
+                $overs: Int
+                $captainNotes: String
+              ) {
+                createMatch(
+                  matchDate: $matchDate
+                  opponentId: $opponentId
+                  venueId: $venueId
+                  seasonId: $seasonId
+                  importance: $importance
+                  format: $format
+                  overs: $overs
+                  captainNotes: $captainNotes
+                ) {
+                  id
+                }
+              }
+            `,
+            variables: {
+              matchDate: new Date(formData.matchDate).toISOString(),
+              opponentId: formData.opponentId,
+              venueId: formData.venueId,
+              seasonId: formData.seasonId,
+              importance: formData.importance,
+              format: formData.format || null,
+              overs: formData.overs,
+              captainNotes: formData.captainNotes || null,
+            },
+          }),
+        })
+      }
       setShowForm(false)
+      setEditingMatch(null)
       fetchMatches()
     } catch (error) {
-      console.error('Failed to create match:', error)
+      console.error('Failed to save match:', error)
     } finally {
       setSaving(false)
     }
@@ -194,16 +248,31 @@ export default function MatchesPage() {
     )
   }
 
-  if (showForm) {
+  if (showForm || editingMatch) {
     return (
       <div className="space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Schedule Match</h1>
-          <p className="text-muted-foreground mt-1">Add a new match to the calendar</p>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {editingMatch ? 'Edit Match' : 'Schedule Match'}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {editingMatch ? `Update match vs ${editingMatch.opponent.name}` : 'Add a new match to the calendar'}
+          </p>
         </div>
         <MatchForm
+          match={editingMatch ? {
+            id: editingMatch.id,
+            matchDate: editingMatch.matchDate.split('T')[0],
+            opponentId: editingMatch.opponent.id,
+            venueId: editingMatch.venue.id,
+            seasonId: editingMatch.season.id,
+            importance: editingMatch.importance,
+            format: editingMatch.format || '',
+            overs: editingMatch.overs || null,
+            captainNotes: editingMatch.captainNotes || '',
+          } : undefined}
           onSubmit={handleSubmit}
-          onCancel={() => setShowForm(false)}
+          onCancel={() => { setShowForm(false); setEditingMatch(null) }}
           isLoading={saving}
         />
       </div>
@@ -353,6 +422,9 @@ export default function MatchesPage() {
                           <MapPin className="h-3 w-3" />
                           {match.venue.name}
                         </span>
+                        <Badge variant="outline" className="text-xs">
+                          {match.format || match.season.format || 'T20'} ({match.overs || match.season.overs || 20} ov)
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -380,14 +452,23 @@ export default function MatchesPage() {
                       </Button>
                     </Link>
                     {isAdmin && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                        onClick={() => handleDelete(match.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setEditingMatch(match)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => handleDelete(match.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -456,6 +537,9 @@ export default function MatchesPage() {
                           <MapPin className="h-3 w-3" />
                           {match.venue.name}
                         </span>
+                        <Badge variant="outline" className="text-xs">
+                          {match.format || match.season.format || 'T20'} ({match.overs || match.season.overs || 20} ov)
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -481,14 +565,23 @@ export default function MatchesPage() {
                   )}
 
                   {isAdmin && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                      onClick={() => handleDelete(match.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setEditingMatch(match)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => handleDelete(match.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Save, X } from 'lucide-react'
@@ -61,6 +61,13 @@ export function VenueForm({ venue, onSubmit, onCancel, isLoading }: VenueFormPro
     venue ? { ...venue } : defaultFormData
   )
   const [error, setError] = useState('')
+
+  // Sync formData when venue prop changes
+  useEffect(() => {
+    if (venue) {
+      setFormData({ ...venue })
+    }
+  }, [venue])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

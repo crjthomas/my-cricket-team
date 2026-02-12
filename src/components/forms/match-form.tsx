@@ -11,6 +11,8 @@ interface MatchFormData {
   venueId: string
   seasonId: string
   importance: string
+  format: string
+  overs: number | null
   captainNotes: string
 }
 
@@ -18,6 +20,20 @@ interface Option {
   id: string
   name: string
 }
+
+interface SeasonOption extends Option {
+  format: string
+  overs: number
+}
+
+const formatOptions = [
+  { value: '', label: 'Use Season Default', overs: null },
+  { value: 'T20', label: 'T20 (20 overs)', overs: 20 },
+  { value: 'T30', label: 'T30 (30 overs)', overs: 30 },
+  { value: 'T10', label: 'T10 (10 overs)', overs: 10 },
+  { value: 'ODI', label: 'ODI (50 overs)', overs: 50 },
+  { value: 'OTHER', label: 'Other', overs: 20 },
+]
 
 interface MatchFormProps {
   match?: MatchFormData & { id: string }
@@ -34,14 +50,24 @@ export function MatchForm({ match, onSubmit, onCancel, isLoading }: MatchFormPro
       venueId: '',
       seasonId: '',
       importance: 'REGULAR',
+      format: '',
+      overs: null,
       captainNotes: '',
     }
   )
   const [opponents, setOpponents] = useState<Option[]>([])
   const [venues, setVenues] = useState<Option[]>([])
-  const [seasons, setSeasons] = useState<Option[]>([])
+  const [seasons, setSeasons] = useState<SeasonOption[]>([])
   const [error, setError] = useState('')
   const [loadingOptions, setLoadingOptions] = useState(true)
+  const isEditing = !!match
+
+  // Sync formData when match prop changes
+  useEffect(() => {
+    if (match) {
+      setFormData(match)
+    }
+  }, [match])
 
   useEffect(() => {
     fetchOptions()
@@ -57,7 +83,7 @@ export function MatchForm({ match, onSubmit, onCancel, isLoading }: MatchFormPro
             query {
               opponents { id name }
               venues { id name }
-              seasons { id name isActive }
+              seasons { id name isActive format overs }
             }
           `,
         }),
@@ -158,6 +184,48 @@ export function MatchForm({ match, onSubmit, onCancel, isLoading }: MatchFormPro
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium">Match Format</label>
+              <select
+                value={formData.format}
+                onChange={(e) => {
+                  const selectedFormat = formatOptions.find(f => f.value === e.target.value)
+                  updateField('format', e.target.value)
+                  if (selectedFormat && selectedFormat.overs) {
+                    updateField('overs', selectedFormat.overs)
+                  } else {
+                    updateField('overs', null)
+                  }
+                }}
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                {formatOptions.map(opt => (
+                  <option key={opt.value || 'default'} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              {formData.format === '' && formData.seasonId && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Will use season format: {seasons.find(s => s.id === formData.seasonId)?.format || 'T20'} ({seasons.find(s => s.id === formData.seasonId)?.overs || 20} overs)
+                </p>
+              )}
+            </div>
+            {formData.format && (
+              <div>
+                <label className="text-sm font-medium">Overs per Innings</label>
+                <input
+                  type="number"
+                  value={formData.overs || ''}
+                  onChange={(e) => updateField('overs', parseInt(e.target.value) || null)}
+                  className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  min="1"
+                  max="50"
+                  placeholder="Custom overs"
+                />
+              </div>
+            )}
+          </div>
+
           <div>
             <label className="text-sm font-medium">Opponent *</label>
             {opponents.length === 0 ? (
@@ -168,8 +236,9 @@ export function MatchForm({ match, onSubmit, onCancel, isLoading }: MatchFormPro
               <select
                 value={formData.opponentId}
                 onChange={(e) => updateField('opponentId', e.target.value)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-muted disabled:cursor-not-allowed"
                 required
+                disabled={isEditing}
               >
                 <option value="">Select opponent...</option>
                 {opponents.map((opp) => (
@@ -177,6 +246,7 @@ export function MatchForm({ match, onSubmit, onCancel, isLoading }: MatchFormPro
                 ))}
               </select>
             )}
+            {isEditing && <p className="text-xs text-muted-foreground mt-1">Cannot change opponent after creation</p>}
           </div>
 
           <div>
@@ -189,8 +259,9 @@ export function MatchForm({ match, onSubmit, onCancel, isLoading }: MatchFormPro
               <select
                 value={formData.venueId}
                 onChange={(e) => updateField('venueId', e.target.value)}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-muted disabled:cursor-not-allowed"
                 required
+                disabled={isEditing}
               >
                 <option value="">Select venue...</option>
                 {venues.map((venue) => (
@@ -198,6 +269,7 @@ export function MatchForm({ match, onSubmit, onCancel, isLoading }: MatchFormPro
                 ))}
               </select>
             )}
+            {isEditing && <p className="text-xs text-muted-foreground mt-1">Cannot change venue after creation</p>}
           </div>
 
           <div>
@@ -205,14 +277,16 @@ export function MatchForm({ match, onSubmit, onCancel, isLoading }: MatchFormPro
             <select
               value={formData.seasonId}
               onChange={(e) => updateField('seasonId', e.target.value)}
-              className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-muted disabled:cursor-not-allowed"
               required
+              disabled={isEditing}
             >
               <option value="">Select season...</option>
               {seasons.map((season) => (
                 <option key={season.id} value={season.id}>{season.name}</option>
               ))}
             </select>
+            {isEditing && <p className="text-xs text-muted-foreground mt-1">Cannot change season after creation</p>}
           </div>
 
           <div>

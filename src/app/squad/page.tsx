@@ -34,6 +34,13 @@ interface Player {
   bowlingSkill: number
   battingStyle: string
   bowlingStyle: string
+  battingPosition: string
+  experienceLevel: number
+  isWicketkeeper: boolean
+  isCaptain: boolean
+  isViceCaptain: boolean
+  availableForT20: boolean
+  availableForT30: boolean
   currentSeasonStats?: {
     matchesPlayed: number
     matchesAvailable: number
@@ -48,6 +55,12 @@ interface Match {
   matchNumber: number
   matchDate: string
   importance: string
+  format: string | null
+  overs: number | null
+  season: {
+    format: string
+    overs: number
+  }
   opponent: {
     id: string
     name: string
@@ -79,6 +92,89 @@ interface SelectedPlayer {
 
 type SelectionMode = 'WIN_FOCUSED' | 'BALANCED' | 'OPPORTUNITY_FOCUSED'
 
+// Helper to get the effective format for a match (match format or season format)
+const getMatchFormat = (match: Match): string => {
+  return match.format || match.season?.format || 'T20'
+}
+
+// Helper to get effective overs for a match
+const getMatchOvers = (match: Match): number => {
+  return match.overs || match.season?.overs || 20
+}
+
+// Helper to check if a player is available for a given format
+const isPlayerAvailableForFormat = (player: Player, format: string): boolean => {
+  if (format === 'T20' || format === 'T10') {
+    return player.availableForT20
+  }
+  if (format === 'T30' || format === 'ODI' || format === 'OTHER') {
+    return player.availableForT30
+  }
+  return true
+}
+
+// Calculate batting order for selected players based on their attributes
+const assignBattingOrder = (selectedPlayers: Player[]): Player[] => {
+  // Batting position priority (lower = bats earlier)
+  const positionPriority: Record<string, number> = {
+    'OPENER': 1,
+    'TOP_ORDER': 2,
+    'MIDDLE_ORDER': 3,
+    'LOWER_ORDER': 4,
+    'FINISHER': 5,
+  }
+  
+  // Role priority for batting order
+  const rolePriority: Record<string, number> = {
+    'BATSMAN': 1,
+    'BATTING_ALL_ROUNDER': 2,
+    'WICKETKEEPER': 2.5,
+    'ALL_ROUNDER': 3,
+    'BOWLING_ALL_ROUNDER': 4,
+    'BOWLER': 5,
+  }
+  
+  // Calculate batting order score (lower = bats earlier)
+  const scoredPlayers = selectedPlayers.map(player => {
+    let score = 0
+    
+    // Position is the primary factor
+    score += (positionPriority[player.battingPosition] || 3) * 100
+    
+    // Role affects order within position
+    score += (rolePriority[player.primaryRole] || 3) * 10
+    
+    // Better batting skill = bat earlier (subtract from score)
+    score -= player.battingSkill * 5
+    
+    // Experience helps batting earlier
+    score -= player.experienceLevel * 2
+    
+    // Captain/Vice Captain often bat in key positions (top 5)
+    if (player.isCaptain || player.isViceCaptain) {
+      score -= 15
+    }
+    
+    // Wicketkeepers often bat in middle order
+    if (player.isWicketkeeper && player.primaryRole !== 'WICKETKEEPER') {
+      score += 20 // Push slightly down unless designated keeper-batsman
+    }
+    
+    // Form bonus - in-form batsmen should bat higher
+    const form = player.currentSeasonStats?.currentForm || 'AVERAGE'
+    if (form === 'EXCELLENT') score -= 10
+    else if (form === 'GOOD') score -= 5
+    else if (form === 'POOR') score += 10
+    
+    return { player, score }
+  })
+  
+  // Sort by score (lower score = earlier in batting order)
+  scoredPlayers.sort((a, b) => a.score - b.score)
+  
+  return scoredPlayers.map(sp => sp.player)
+}
+
 export default function SquadSelectorPage() {
   const { isAdmin } = useAuth()
   const [matches, setMatches] = useState<Match[]>([])
@@ -95,6 +191,11 @@ export default function SquadSelectorPage() {
   const [winProbability, setWinProbability] = useState<number>(0)
   const [fairnessScore, setFairnessScore] = useState<number>(0)
 
+  // Filter players available for the selected match format
+  const availablePlayers = selectedMatch 
+    ? players.filter(p => isPlayerAvailableForFormat(p, getMatchFormat(selectedMatch)))
+    : players
+
   useEffect(() => {
     fetchData()
   }, [])
@@ -108,12 +209,15 @@ export default function SquadSelectorPage() {
           query: `
             query {
               upcomingMatches(limit: 10) {
-                id matchNumber matchDate importance
+                id matchNumber matchDate importance format overs
+                season { format overs }
                 opponent { id name shortName overallStrength battingStrength bowlingStrength }
                 venue { id name pitchType boundarySize }
               }
               players(activeOnly: true) {
                 id name jerseyNumber primaryRole battingSkill bowlingSkill battingStyle bowlingStyle
+                battingPosition experienceLevel isWicketkeeper isCaptain isViceCaptain
+                availableForT20 availableForT30
                 currentSeasonStats {
                   matchesPlayed matchesAvailable currentForm runsScored wicketsTaken
                 }
@@ -144,7 +248,8 @@ export default function SquadSelectorPage() {
     try {
       // For now, we'll generate a simple AI recommendation locally
       // In production, this would call an AI service
-      const sortedPlayers = [...players].sort((a, b) => {
+      // Only consider players available for this match format
+      const sortedPlayers = [...availablePlayers].sort((a, b) => {
         const aForm = a.currentSeasonStats?.currentForm || 'AVERAGE'
         const bForm = b.currentSeasonStats?.currentForm || 'AVERAGE'
         const formOrder = { 'EXCELLENT': 4, 'GOOD': 3, 'AVERAGE': 2, 'POOR': 1 }
@@ -160,7 +265,11 @@ export default function SquadSelectorPage() {
         return bScore - aScore
       })
 
-      const selected = sortedPlayers.slice(0, 11).map((p, i) => ({
+      // Select top 11 players, then assign batting order based on attributes
+      const top11 = sortedPlayers.slice(0, 11)
+      const orderedPlayers = assignBattingOrder(top11)
+      
+      const selected = orderedPlayers.map((p, i) => ({
         id: p.id,
         name: p.name,
         jerseyNumber: p.jerseyNumber,
@@ -184,24 +293,35 @@ The ${selectionMode.toLowerCase().replace('_', ' ')} approach prioritizes ${
         selectionMode === 'WIN_FOCUSED' ? 'our strongest performers for maximum chance of victory' :
         selectionMode === 'BALANCED' ? 'a mix of form and opportunity for all players' :
         'giving game time to players who need more matches'
-      }.`)
+      }.
+
+**Batting Order**: Assigned based on each player's preferred position, role, batting skill, experience, captaincy status, and current form. Openers and top-order batsmen bat first, followed by middle-order and finishers.`)
+      
+      const matchFormat = getMatchFormat(selectedMatch)
+      const matchOvers = getMatchOvers(selectedMatch)
+      const unavailableForFormat = players.filter(p => !isPlayerAvailableForFormat(p, matchFormat))
       
       setAiInsights([
+        `Match format: ${matchFormat} (${matchOvers} overs)`,
+        `${availablePlayers.length} players available for ${matchFormat} format`,
         `${selectedMatch.opponent.name} has strength rating of ${selectedMatch.opponent.overallStrength}/10`,
         `Pitch conditions at ${selectedMatch.venue.name} favor ${selectedMatch.venue.pitchType.includes('BATTING') ? 'batting' : selectedMatch.venue.pitchType.includes('BOWLING') ? 'bowling' : 'balanced play'}`,
         `Selected ${selected.filter(p => p.role === 'BATSMAN').length} batsmen and ${selected.filter(p => p.role === 'BOWLER').length} bowlers`,
       ])
       
-      const needsGames = players.filter(p => {
+      const needsGames = availablePlayers.filter(p => {
         const ratio = (p.currentSeasonStats?.matchesPlayed || 0) / Math.max(p.currentSeasonStats?.matchesAvailable || 1, 1)
         return ratio < 0.4 && !selected.find(s => s.id === p.id)
       })
       
+      const warnings: string[] = []
       if (needsGames.length > 0) {
-        setAiWarnings([`${needsGames.map(p => p.name).join(', ')} need${needsGames.length === 1 ? 's' : ''} more playing time`])
-      } else {
-        setAiWarnings([])
+        warnings.push(`${needsGames.map(p => p.name).join(', ')} need${needsGames.length === 1 ? 's' : ''} more playing time`)
       }
+      if (unavailableForFormat.length > 0) {
+        warnings.push(`${unavailableForFormat.length} player${unavailableForFormat.length === 1 ? ' is' : 's are'} not available for ${matchFormat} format`)
+      }
+      setAiWarnings(warnings)
       
     } catch (error) {
       console.error('Failed to generate squad:', error)

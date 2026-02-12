@@ -76,6 +76,14 @@ export const typeDefs = gql`
     LOW_STAKES
   }
 
+  enum MatchFormat {
+    T20
+    T30
+    T10
+    ODI
+    OTHER
+  }
+
   enum SelectionMode {
     WIN_FOCUSED
     BALANCED
@@ -208,6 +216,8 @@ export const typeDefs = gql`
     endDate: DateTime
     isActive: Boolean!
     description: String
+    format: MatchFormat!
+    overs: Int!
     totalMatches: Int!
     matchesPlayed: Int!
     wins: Int!
@@ -227,6 +237,8 @@ export const typeDefs = gql`
     matchType: String!
     status: MatchStatus!
     importance: MatchImportance!
+    format: MatchFormat
+    overs: Int
     weather: String
     leaguePosition: Int
     matchesRemaining: Int
@@ -717,6 +729,8 @@ export const typeDefs = gql`
       venueId: String!
       seasonId: String!
       importance: MatchImportance
+      format: MatchFormat
+      overs: Int
       captainNotes: String
     ): Match!
     updateMatchResult(
@@ -783,6 +797,8 @@ export const typeDefs = gql`
       startDate: DateTime!
       endDate: DateTime
       description: String
+      format: MatchFormat
+      overs: Int
       totalMatches: Int
       totalTeams: Int
       isActive: Boolean
@@ -793,6 +809,8 @@ export const typeDefs = gql`
       startDate: DateTime
       endDate: DateTime
       description: String
+      format: MatchFormat
+      overs: Int
       totalMatches: Int
       totalTeams: Int
       isActive: Boolean
@@ -806,6 +824,8 @@ export const typeDefs = gql`
       id: ID!
       matchDate: DateTime
       importance: MatchImportance
+      format: MatchFormat
+      overs: Int
       captainNotes: String
       status: MatchStatus
     ): Match!
