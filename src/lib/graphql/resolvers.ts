@@ -694,9 +694,40 @@ export const resolvers = {
     },
 
     updatePlayer: async (_: unknown, { id, input }: { id: string; input: Record<string, unknown> }) => {
+      // Build update data with explicit handling for all fields
+      const updateData: Record<string, unknown> = {}
+      
+      // Simple fields - only include if explicitly provided (not undefined)
+      const simpleFields = [
+        'name', 'email', 'phone', 'jerseyNumber', 'primaryRole', 'battingStyle',
+        'bowlingStyle', 'battingPosition', 'battingSkill', 'bowlingSkill', 'fieldingSkill',
+        'experienceLevel', 'powerHitting', 'runningBetweenWickets', 'pressureHandling',
+        'fitnessLevel', 'currentInjuryStatus', 'reliabilityScore', 'trainingAttendance',
+        'isRookie', 'tennisBallBackground', 'yearsPlaying', 'captainChoice', 'isActive',
+        'isWicketkeeper', 'isCaptain', 'isViceCaptain', 'availableForT20', 'availableForT30',
+        'leaguePreferenceNotes'
+      ]
+      
+      for (const field of simpleFields) {
+        if (input[field] !== undefined) {
+          updateData[field] = input[field]
+        }
+      }
+      
+      // Array fields - explicitly set to ensure they're updated properly
+      // These must be set as arrays (even empty) if provided
+      const arrayFields = ['preferredFieldingPositions', 'bowlingVariations', 'previousTeams', 'injuryHistory']
+      
+      for (const field of arrayFields) {
+        if (input[field] !== undefined) {
+          // Ensure it's an array, default to empty array if null
+          updateData[field] = Array.isArray(input[field]) ? input[field] : []
+        }
+      }
+      
       const player = await prisma.player.update({
         where: { id },
-        data: input,
+        data: updateData,
       })
 
       await prisma.activity.create({
