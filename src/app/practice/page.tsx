@@ -177,28 +177,29 @@ export default function PracticeMatchPage() {
         score += 1000 // Ensure bowlers are always last
       }
       
-      // Position is primary factor
-      score += (positionPriority[player.battingPosition] || 3) * 100
+      // Batting skill is the PRIMARY factor - stronger batsmen bat higher
+      // Scale: 1-10, so max impact is -150 for skill 10, 0 for skill 0
+      score -= player.battingSkill * 15
       
-      // Role affects order within position
-      score += (rolePriority[player.primaryRole] || 3) * 10
+      // Position preference affects order
+      score += (positionPriority[player.battingPosition] || 3) * 20
       
-      // Better batting skill = bat earlier
-      score -= player.battingSkill * 5
+      // Role affects order within similar skill levels
+      score += (rolePriority[player.primaryRole] || 3) * 8
       
       // Experience helps
-      score -= player.experienceLevel * 2
+      score -= player.experienceLevel * 3
       
       // Captain/Vice Captain in key positions
       if (player.isCaptain || player.isViceCaptain) {
-        score -= 15
+        score -= 20
       }
       
       // Form bonus
       const form = player.seasonStats?.currentForm || 'AVERAGE'
-      if (form === 'EXCELLENT') score -= 10
-      else if (form === 'GOOD') score -= 5
-      else if (form === 'POOR') score += 10
+      if (form === 'EXCELLENT') score -= 15
+      else if (form === 'GOOD') score -= 8
+      else if (form === 'POOR') score += 15
       
       return { player, score }
     })
