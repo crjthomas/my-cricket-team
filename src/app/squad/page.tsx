@@ -410,14 +410,31 @@ export default function SquadSelectorPage() {
         return false
       }
       
-      // 1. Select 1 wicketkeeper (required)
-      if (sortedWicketkeepers.length > 0) {
-        addPlayer(sortedWicketkeepers[0])
+      // 0. ALWAYS select captain and vice-captain first (they must play!)
+      const captain = availablePlayers.find(p => p.isCaptain)
+      const viceCaptain = availablePlayers.find(p => p.isViceCaptain)
+      
+      if (captain) {
+        addPlayer(captain)
+      }
+      if (viceCaptain) {
+        addPlayer(viceCaptain)
+      }
+      
+      // 1. Select 1 wicketkeeper (required) - if not already captain/vc
+      if (sortedWicketkeepers.length > 0 && !sortedWicketkeepers.some(wk => selectedIds.has(wk.id))) {
+        // Find first wicketkeeper not already selected
+        for (const wk of sortedWicketkeepers) {
+          if (addPlayer(wk)) break
+        }
       }
       
       // 2. Select batsmen (aim for 3-4)
+      // Count how many batsmen are already selected (captain/vc may be batsmen)
       const targetBatsmen = selectionMode === 'WIN_FOCUSED' ? 4 : 3
-      let batsmenAdded = 0
+      let batsmenAdded = squad.filter(p => 
+        p.primaryRole === 'BATSMAN' || p.primaryRole === 'BATTING_ALL_ROUNDER'
+      ).length
       for (const p of sortedBatsmen) {
         if (batsmenAdded >= targetBatsmen) break
         if (addPlayer(p)) batsmenAdded++
@@ -425,9 +442,12 @@ export default function SquadSelectorPage() {
       
       // 3. Select bowlers (aim for 4-5)
       // Consider pitch type
+      // Count how many bowlers are already selected (captain/vc may be bowlers)
       const pitchType = selectedMatch.venue.pitchType || 'BALANCED'
       const targetBowlers = pitchType.includes('BOWLING') ? 5 : pitchType.includes('BATTING') ? 3 : 4
-      let bowlersAdded = 0
+      let bowlersAdded = squad.filter(p => 
+        p.primaryRole === 'BOWLER' || p.primaryRole === 'BOWLING_ALL_ROUNDER'
+      ).length
       for (const p of sortedBowlers) {
         if (bowlersAdded >= targetBowlers) break
         if (addPlayer(p)) bowlersAdded++
