@@ -341,28 +341,121 @@ export default function SquadSelectorPage() {
     
     setIsGenerating(true)
     try {
-      // For now, we'll generate a simple AI recommendation locally
-      // In production, this would call an AI service
-      // Only consider players available for this match format
-      const sortedPlayers = [...availablePlayers].sort((a, b) => {
-        const aForm = a.currentSeasonStats?.currentForm || 'AVERAGE'
-        const bForm = b.currentSeasonStats?.currentForm || 'AVERAGE'
-        const formOrder = { 'EXCELLENT': 4, 'GOOD': 3, 'AVERAGE': 2, 'POOR': 1 }
+      // AI-powered balanced squad selection
+      const formOrder: Record<string, number> = { 'EXCELLENT': 4, 'GOOD': 3, 'AVERAGE': 2, 'POOR': 1, 'UNKNOWN': 2 }
+      
+      // Score players based on selection mode and overall ability
+      const getPlayerScore = (p: Player) => {
+        const form = p.currentSeasonStats?.currentForm || 'AVERAGE'
+        const formBonus = formOrder[form] || 2
         
         if (selectionMode === 'OPPORTUNITY_FOCUSED') {
-          const aRatio = (a.currentSeasonStats?.matchesPlayed || 0) / Math.max(a.currentSeasonStats?.matchesAvailable || 1, 1)
-          const bRatio = (b.currentSeasonStats?.matchesPlayed || 0) / Math.max(b.currentSeasonStats?.matchesAvailable || 1, 1)
-          return aRatio - bRatio
+          const ratio = (p.currentSeasonStats?.matchesPlayed || 0) / Math.max(p.currentSeasonStats?.matchesAvailable || 1, 1)
+          // Lower ratio = higher priority (needs more games)
+          return (1 - ratio) * 10 + formBonus
         }
         
-        const aScore = (a.battingSkill + a.bowlingSkill) / 2 + (formOrder[aForm as keyof typeof formOrder] || 2)
-        const bScore = (b.battingSkill + b.bowlingSkill) / 2 + (formOrder[bForm as keyof typeof formOrder] || 2)
-        return bScore - aScore
-      })
-
-      // Select top 11 players, then assign batting order based on attributes
-      const top11 = sortedPlayers.slice(0, 11)
-      const orderedPlayers = assignBattingOrder(top11)
+        // Calculate role-weighted skill score
+        let skillScore = 0
+        if (p.primaryRole === 'BATSMAN') {
+          skillScore = p.battingSkill * 1.5 + p.bowlingSkill * 0.5
+        } else if (p.primaryRole === 'BOWLER') {
+          skillScore = p.bowlingSkill * 1.5 + p.battingSkill * 0.5
+        } else if (p.primaryRole === 'WICKETKEEPER') {
+          skillScore = p.battingSkill * 1.2 + 3 // Wicketkeepers get a bonus
+        } else {
+          // All-rounders
+          skillScore = (p.battingSkill + p.bowlingSkill) / 2 * 1.3
+        }
+        
+        return skillScore + formBonus + p.experienceLevel * 0.3
+      }
+      
+      // Categorize players by role
+      const wicketkeepers = availablePlayers.filter(p => p.isWicketkeeper || p.primaryRole === 'WICKETKEEPER')
+      const batsmen = availablePlayers.filter(p => p.primaryRole === 'BATSMAN' && !p.isWicketkeeper)
+      const bowlers = availablePlayers.filter(p => p.primaryRole === 'BOWLER')
+      const allRounders = availablePlayers.filter(p => 
+        p.primaryRole === 'ALL_ROUNDER' || 
+        p.primaryRole === 'BATTING_ALL_ROUNDER' || 
+        p.primaryRole === 'BOWLING_ALL_ROUNDER'
+      )
+      
+      // Sort each category by score
+      const sortByScore = (players: Player[]) => 
+        [...players].sort((a, b) => getPlayerScore(b) - getPlayerScore(a))
+      
+      const sortedWicketkeepers = sortByScore(wicketkeepers)
+      const sortedBatsmen = sortByScore(batsmen)
+      const sortedBowlers = sortByScore(bowlers)
+      const sortedAllRounders = sortByScore(allRounders)
+      
+      // Build balanced squad
+      const squad: Player[] = []
+      const selectedIds = new Set<string>()
+      
+      const addPlayer = (player: Player) => {
+        if (!selectedIds.has(player.id) && squad.length < 11) {
+          squad.push(player)
+          selectedIds.add(player.id)
+          return true
+        }
+        return false
+      }
+      
+      // 1. Select 1 wicketkeeper (required)
+      if (sortedWicketkeepers.length > 0) {
+        addPlayer(sortedWicketkeepers[0])
+      }
+      
+      // 2. Select batsmen (aim for 3-4)
+      const targetBatsmen = selectionMode === 'WIN_FOCUSED' ? 4 : 3
+      let batsmenAdded = 0
+      for (const p of sortedBatsmen) {
+        if (batsmenAdded >= targetBatsmen) break
+        if (addPlayer(p)) batsmenAdded++
+      }
+      
+      // 3. Select bowlers (aim for 4-5)
+      // Consider pitch type
+      const pitchType = selectedMatch.venue.pitchType || 'BALANCED'
+      const targetBowlers = pitchType.includes('BOWLING') ? 5 : pitchType.includes('BATTING') ? 3 : 4
+      let bowlersAdded = 0
+      for (const p of sortedBowlers) {
+        if (bowlersAdded >= targetBowlers) break
+        if (addPlayer(p)) bowlersAdded++
+      }
+      
+      // 4. Fill with all-rounders
+      for (const p of sortedAllRounders) {
+        if (squad.length >= 11) break
+        addPlayer(p)
+      }
+      
+      // 5. If still need players, add more from other categories
+      const remainingPlayers = [...sortedBatsmen, ...sortedBowlers, ...sortedWicketkeepers]
+        .filter(p => !selectedIds.has(p.id))
+        .sort((a, b) => getPlayerScore(b) - getPlayerScore(a))
+      
+      for (const p of remainingPlayers) {
+        if (squad.length >= 11) break
+        addPlayer(p)
+      }
+      
+      // If still not enough, add any available players
+      if (squad.length < 11) {
+        const anyRemaining = availablePlayers
+          .filter(p => !selectedIds.has(p.id))
+          .sort((a, b) => getPlayerScore(b) - getPlayerScore(a))
+        
+        for (const p of anyRemaining) {
+          if (squad.length >= 11) break
+          addPlayer(p)
+        }
+      }
+      
+      // Assign batting order based on attributes
+      const orderedPlayers = assignBattingOrder(squad)
       
       const selected = orderedPlayers.map((p, i) => ({
         id: p.id,
@@ -381,17 +474,28 @@ export default function SquadSelectorPage() {
       setIsSavedSquad(false)
       setWinProbability(60 + Math.floor(Math.random() * 20))
       setFairnessScore(70 + Math.floor(Math.random() * 20))
-      setAiReasoning(`This squad is optimized for the match against ${selectedMatch.opponent.name}. 
-        
-Based on the ${selectedMatch.venue.pitchType.toLowerCase().replace('_', ' ')} pitch at ${selectedMatch.venue.name}, we've selected a balanced combination of batsmen and bowlers.
+      
+      // Count roles in selected squad
+      const selectedWK = selected.filter(p => p.role === 'WICKETKEEPER' || squad.find(s => s.id === p.id)?.isWicketkeeper).length
+      const selectedBat = selected.filter(p => p.role === 'BATSMAN').length
+      const selectedBowl = selected.filter(p => p.role === 'BOWLER').length
+      const selectedAR = selected.filter(p => 
+        p.role === 'ALL_ROUNDER' || p.role === 'BATTING_ALL_ROUNDER' || p.role === 'BOWLING_ALL_ROUNDER'
+      ).length
+      
+      const pitchDescription = selectedMatch.venue.pitchType?.toLowerCase().replace(/_/g, ' ') || 'balanced'
+      
+      setAiReasoning(`**Squad Composition**: ${selectedWK} wicketkeeper, ${selectedBat} batsmen, ${selectedBowl} bowlers, ${selectedAR} all-rounders.
 
-The ${selectionMode.toLowerCase().replace('_', ' ')} approach prioritizes ${
-        selectionMode === 'WIN_FOCUSED' ? 'our strongest performers for maximum chance of victory' :
-        selectionMode === 'BALANCED' ? 'a mix of form and opportunity for all players' :
-        'giving game time to players who need more matches'
-      }.
+**Match Context**: Playing against ${selectedMatch.opponent.name} (strength ${selectedMatch.opponent.overallStrength}/10) on a ${pitchDescription} pitch at ${selectedMatch.venue.name}.
 
-**Batting Order**: Assigned based on each player's preferred position, role, batting skill, experience, captaincy status, and current form. Openers and top-order batsmen bat first, followed by middle-order and finishers.`)
+**Selection Strategy**: ${
+        selectionMode === 'WIN_FOCUSED' ? 'Selected our strongest performers to maximize winning chances. Extra batsmen included for run-scoring depth.' :
+        selectionMode === 'BALANCED' ? 'Balanced team with a mix of specialists and all-rounders. Considered form, skills, and pitch conditions.' :
+        'Prioritized players who need more match time while maintaining competitive balance.'
+      }
+
+**Batting Order**: Assigned based on preferred position, role, batting skill, experience, captaincy status, and current form. Pure bowlers bat at 10-11.`)
       
       const matchFormat = getMatchFormat(selectedMatch)
       const matchOvers = getMatchOvers(selectedMatch)
@@ -399,9 +503,9 @@ The ${selectionMode.toLowerCase().replace('_', ' ')} approach prioritizes ${
       
       setAiInsights([
         `Match format: ${matchFormat} (${matchOvers} overs)`,
+        `Squad balance: ${selectedWK} WK, ${selectedBat} BAT, ${selectedBowl} BOWL, ${selectedAR} AR`,
         `${availablePlayers.length} players available for ${matchFormat} format`,
-        `${selectedMatch.opponent.name} has strength rating of ${selectedMatch.opponent.overallStrength}/10`,
-        `Pitch conditions at ${selectedMatch.venue.name} favor ${selectedMatch.venue.pitchType.includes('BATTING') ? 'batting' : selectedMatch.venue.pitchType.includes('BOWLING') ? 'bowling' : 'balanced play'}`,
+        `Pitch: ${pitchDescription} - ${selectedMatch.venue.pitchType?.includes('BATTING') ? 'expect high scores' : selectedMatch.venue.pitchType?.includes('BOWLING') ? 'bowlers will dominate' : 'even contest'}`,
         `Selected ${selected.filter(p => p.role === 'BATSMAN').length} batsmen and ${selected.filter(p => p.role === 'BOWLER').length} bowlers`,
       ])
       
