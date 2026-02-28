@@ -694,6 +694,9 @@ export const resolvers = {
     },
 
     updatePlayer: async (_: unknown, { id, input }: { id: string; input: Record<string, unknown> }) => {
+      // Log incoming data for debugging
+      console.log('[updatePlayer] Received input for player', id, ':', JSON.stringify(input, null, 2))
+      
       // Build update data with explicit handling for all fields
       const updateData: Record<string, unknown> = {}
       
@@ -724,6 +727,8 @@ export const resolvers = {
           updateData[field] = Array.isArray(input[field]) ? input[field] : []
         }
       }
+      
+      console.log('[updatePlayer] Updating with data:', JSON.stringify(updateData, null, 2))
       
       const player = await prisma.player.update({
         where: { id },

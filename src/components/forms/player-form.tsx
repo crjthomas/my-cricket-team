@@ -223,27 +223,49 @@ const bowlingVariationOptions = [
 ]
 
 export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerFormProps) {
-  const [formData, setFormData] = useState<PlayerFormData>(() => {
-    if (!player) return defaultFormData
+  // Helper function to ensure player data is properly formatted
+  const formatPlayerData = (p: typeof player): PlayerFormData => {
+    if (!p) return defaultFormData
     return {
-      ...defaultFormData,
-      ...player,
-      // Ensure boolean fields are explicitly set (not undefined)
-      isCaptain: player.isCaptain ?? false,
-      isViceCaptain: player.isViceCaptain ?? false,
-      isWicketkeeper: player.isWicketkeeper ?? false,
-      isActive: player.isActive ?? true,
-      isRookie: player.isRookie ?? false,
-      tennisBallBackground: player.tennisBallBackground ?? false,
-      availableForT20: player.availableForT20 ?? true,
-      availableForT30: player.availableForT30 ?? true,
-      // Ensure arrays are not null
-      preferredFieldingPositions: player.preferredFieldingPositions ?? [],
-      bowlingVariations: player.bowlingVariations ?? [],
-      previousTeams: player.previousTeams ?? [],
-      injuryHistory: player.injuryHistory ?? [],
+      name: p.name || '',
+      jerseyNumber: p.jerseyNumber ?? null,
+      primaryRole: p.primaryRole || 'BATSMAN',
+      battingStyle: p.battingStyle || 'RIGHT_HAND',
+      bowlingStyle: p.bowlingStyle || 'NONE',
+      battingPosition: p.battingPosition || 'MIDDLE_ORDER',
+      // Numeric fields - explicitly handle to prevent NaN or undefined
+      battingSkill: typeof p.battingSkill === 'number' ? p.battingSkill : 5,
+      bowlingSkill: typeof p.bowlingSkill === 'number' ? p.bowlingSkill : 5,
+      fieldingSkill: typeof p.fieldingSkill === 'number' ? p.fieldingSkill : 5,
+      experienceLevel: typeof p.experienceLevel === 'number' ? p.experienceLevel : 5,
+      powerHitting: typeof p.powerHitting === 'number' ? p.powerHitting : 5,
+      runningBetweenWickets: typeof p.runningBetweenWickets === 'number' ? p.runningBetweenWickets : 5,
+      pressureHandling: typeof p.pressureHandling === 'number' ? p.pressureHandling : 5,
+      fitnessLevel: typeof p.fitnessLevel === 'number' ? p.fitnessLevel : 5,
+      currentInjuryStatus: p.currentInjuryStatus || 'FIT',
+      reliabilityScore: typeof p.reliabilityScore === 'number' ? p.reliabilityScore : 5,
+      trainingAttendance: p.trainingAttendance ?? null,
+      yearsPlaying: p.yearsPlaying ?? null,
+      captainChoice: typeof p.captainChoice === 'number' ? p.captainChoice : 2,
+      // Boolean fields
+      isCaptain: p.isCaptain ?? false,
+      isViceCaptain: p.isViceCaptain ?? false,
+      isWicketkeeper: p.isWicketkeeper ?? false,
+      isActive: p.isActive ?? true,
+      isRookie: p.isRookie ?? false,
+      tennisBallBackground: p.tennisBallBackground ?? false,
+      availableForT20: p.availableForT20 ?? true,
+      availableForT30: p.availableForT30 ?? true,
+      leaguePreferenceNotes: p.leaguePreferenceNotes || '',
+      // Array fields
+      preferredFieldingPositions: Array.isArray(p.preferredFieldingPositions) ? p.preferredFieldingPositions : [],
+      bowlingVariations: Array.isArray(p.bowlingVariations) ? p.bowlingVariations : [],
+      previousTeams: Array.isArray(p.previousTeams) ? p.previousTeams : [],
+      injuryHistory: Array.isArray(p.injuryHistory) ? p.injuryHistory : [],
     }
-  })
+  }
+
+  const [formData, setFormData] = useState<PlayerFormData>(() => formatPlayerData(player))
   const [error, setError] = useState('')
   const [newPreviousTeam, setNewPreviousTeam] = useState('')
   const [newInjury, setNewInjury] = useState('')
@@ -251,24 +273,7 @@ export function PlayerForm({ player, onSubmit, onCancel, isLoading }: PlayerForm
   // Update form data when player prop changes (e.g., after async fetch)
   useEffect(() => {
     if (player) {
-      setFormData({
-        ...defaultFormData,
-        ...player,
-        // Ensure boolean fields are explicitly set (not undefined)
-        isCaptain: player.isCaptain ?? false,
-        isViceCaptain: player.isViceCaptain ?? false,
-        isWicketkeeper: player.isWicketkeeper ?? false,
-        isActive: player.isActive ?? true,
-        isRookie: player.isRookie ?? false,
-        tennisBallBackground: player.tennisBallBackground ?? false,
-        availableForT20: player.availableForT20 ?? true,
-        availableForT30: player.availableForT30 ?? true,
-        // Ensure arrays are not null
-        preferredFieldingPositions: player.preferredFieldingPositions ?? [],
-        bowlingVariations: player.bowlingVariations ?? [],
-        previousTeams: player.previousTeams ?? [],
-        injuryHistory: player.injuryHistory ?? [],
-      })
+      setFormData(formatPlayerData(player))
     }
   }, [player])
 
