@@ -359,12 +359,18 @@ export default function SquadSelectorPage() {
         let skillScore = 0
         if (p.primaryRole === 'BATSMAN') {
           skillScore = p.battingSkill * 1.5 + p.bowlingSkill * 0.5
+        } else if (p.primaryRole === 'BATTING_ALL_ROUNDER') {
+          // Batting all-rounder: primarily batsman with bowling ability
+          skillScore = p.battingSkill * 1.3 + p.bowlingSkill * 0.7
         } else if (p.primaryRole === 'BOWLER') {
           skillScore = p.bowlingSkill * 1.5 + p.battingSkill * 0.5
+        } else if (p.primaryRole === 'BOWLING_ALL_ROUNDER') {
+          // Bowling all-rounder: primarily bowler with batting ability
+          skillScore = p.bowlingSkill * 1.3 + p.battingSkill * 0.7
         } else if (p.primaryRole === 'WICKETKEEPER') {
           skillScore = p.battingSkill * 1.2 + 3 // Wicketkeepers get a bonus
         } else {
-          // All-rounders
+          // Pure all-rounders (balanced)
           skillScore = (p.battingSkill + p.bowlingSkill) / 2 * 1.3
         }
         
@@ -372,14 +378,15 @@ export default function SquadSelectorPage() {
       }
       
       // Categorize players by role
+      // BATTING_ALL_ROUNDER counted as batsmen, BOWLING_ALL_ROUNDER counted as bowlers
       const wicketkeepers = availablePlayers.filter(p => p.isWicketkeeper || p.primaryRole === 'WICKETKEEPER')
-      const batsmen = availablePlayers.filter(p => p.primaryRole === 'BATSMAN' && !p.isWicketkeeper)
-      const bowlers = availablePlayers.filter(p => p.primaryRole === 'BOWLER')
-      const allRounders = availablePlayers.filter(p => 
-        p.primaryRole === 'ALL_ROUNDER' || 
-        p.primaryRole === 'BATTING_ALL_ROUNDER' || 
-        p.primaryRole === 'BOWLING_ALL_ROUNDER'
+      const batsmen = availablePlayers.filter(p => 
+        (p.primaryRole === 'BATSMAN' || p.primaryRole === 'BATTING_ALL_ROUNDER') && !p.isWicketkeeper
       )
+      const bowlers = availablePlayers.filter(p => 
+        p.primaryRole === 'BOWLER' || p.primaryRole === 'BOWLING_ALL_ROUNDER'
+      )
+      const allRounders = availablePlayers.filter(p => p.primaryRole === 'ALL_ROUNDER')
       
       // Sort each category by score
       const sortByScore = (players: Player[]) => 
@@ -476,12 +483,11 @@ export default function SquadSelectorPage() {
       setFairnessScore(70 + Math.floor(Math.random() * 20))
       
       // Count roles in selected squad
+      // Batting all-rounders count towards batsmen, bowling all-rounders count towards bowlers
       const selectedWK = selected.filter(p => p.role === 'WICKETKEEPER' || squad.find(s => s.id === p.id)?.isWicketkeeper).length
-      const selectedBat = selected.filter(p => p.role === 'BATSMAN').length
-      const selectedBowl = selected.filter(p => p.role === 'BOWLER').length
-      const selectedAR = selected.filter(p => 
-        p.role === 'ALL_ROUNDER' || p.role === 'BATTING_ALL_ROUNDER' || p.role === 'BOWLING_ALL_ROUNDER'
-      ).length
+      const selectedBat = selected.filter(p => p.role === 'BATSMAN' || p.role === 'BATTING_ALL_ROUNDER').length
+      const selectedBowl = selected.filter(p => p.role === 'BOWLER' || p.role === 'BOWLING_ALL_ROUNDER').length
+      const selectedAR = selected.filter(p => p.role === 'ALL_ROUNDER').length
       
       const pitchDescription = selectedMatch.venue.pitchType?.toLowerCase().replace(/_/g, ' ') || 'balanced'
       
