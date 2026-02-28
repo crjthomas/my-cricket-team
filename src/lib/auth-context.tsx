@@ -13,6 +13,7 @@ interface AuthContextType {
   user: AuthUser | null
   isLoading: boolean
   isAdmin: boolean
+  isMediaManager: boolean
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
@@ -73,12 +74,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const isAdmin = user?.role === 'ADMIN'
+  const isMediaManager = user?.role === 'MEDIA_MANAGER'
+
   return (
     <AuthContext.Provider
       value={{
         user,
         isLoading,
-        isAdmin: user?.role === 'ADMIN',
+        isAdmin,
+        isMediaManager,
         login,
         logout,
         refreshUser,
@@ -99,7 +104,7 @@ export function useAuth() {
 
 // Permission hooks
 export function usePermissions() {
-  const { user, isAdmin } = useAuth()
+  const { user, isAdmin, isMediaManager } = useAuth()
 
   return {
     // Admin-only features
@@ -109,6 +114,15 @@ export function usePermissions() {
     canManageSettings: isAdmin,
     canManageUsers: isAdmin,
     canEditSquad: isAdmin,
+    canManageVenues: isAdmin,
+    canManageOpponents: isAdmin,
+    canManageSeasons: isAdmin,
+
+    // Media Manager features (Admin can also do these)
+    canManageMedia: isAdmin || isMediaManager,
+    canManageStats: isAdmin || isMediaManager,
+    canManagePressReleases: isAdmin || isMediaManager,
+    canRecordPerformance: isAdmin || isMediaManager,
 
     // User features (view-only)
     canViewPlayers: !!user,

@@ -69,8 +69,9 @@ model Session {
 }
 
 enum UserRole {
-  ADMIN   // Full access: AI selector, squad management, player management, settings
-  USER    // View only: team updates, gallery, match info, player profiles
+  ADMIN           // Full access: AI selector, squad management, player management, settings
+  MEDIA_MANAGER   // Media & stats: gallery, press releases, match statistics, social media
+  USER            // View only: team updates, gallery, match info, player profiles
 }
 
 // ============================================
@@ -723,6 +724,9 @@ enum ActivityType {
   SEASON_STARTED
   AI_RECOMMENDATION
   RATING_UPDATED
+  USER_LOGIN
+  USER_CREATED
+  USER_ROLE_CHANGED
 }
 
 // ============================================

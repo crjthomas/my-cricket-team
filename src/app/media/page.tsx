@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/lib/auth-context'
+import { usePermissions } from '@/lib/auth-context'
 import { 
   Upload, 
   Image as ImageIcon, 
@@ -44,7 +44,7 @@ function formatDuration(seconds: number): string {
 }
 
 export default function MediaPage() {
-  const { isAdmin } = useAuth()
+  const { canManageMedia } = usePermissions()
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [filterType, setFilterType] = useState<'ALL' | 'PHOTO' | 'VIDEO'>('ALL')
   const [media, setMedia] = useState<MediaItem[]>([])
@@ -162,7 +162,7 @@ export default function MediaPage() {
             Photos and videos from matches and training sessions
           </p>
         </div>
-        {isAdmin && (
+        {canManageMedia && (
           <Button className="gap-2" onClick={() => setShowUploadModal(true)}>
             <Upload className="h-4 w-4" />
             Add Media
@@ -322,7 +322,7 @@ export default function MediaPage() {
             <p className="text-muted-foreground text-center mb-4">
               Upload photos and videos from matches and training sessions
             </p>
-            {isAdmin && (
+            {canManageMedia && (
               <Button onClick={() => setShowUploadModal(true)}>
                 <Upload className="h-4 w-4 mr-2" />
                 Add Media
@@ -382,7 +382,7 @@ export default function MediaPage() {
                 >
                   {item.type === 'PHOTO' ? <ImageIcon className="h-3 w-3" /> : <Video className="h-3 w-3" />}
                 </Badge>
-                {isAdmin && (
+                {canManageMedia && (
                   <Button
                     variant="ghost"
                     size="icon"

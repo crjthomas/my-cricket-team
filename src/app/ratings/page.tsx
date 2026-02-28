@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { useAuth } from '@/lib/auth-context'
+import { useAuth, usePermissions } from '@/lib/auth-context'
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -57,6 +57,7 @@ interface PlayerRatingPreview {
 export default function RatingsPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const { canManageStats } = usePermissions()
   const [previews, setPreviews] = useState<PlayerRatingPreview[]>([])
   const [loading, setLoading] = useState(true)
   const [applying, setApplying] = useState(false)
@@ -65,12 +66,12 @@ export default function RatingsPage() {
   const [applied, setApplied] = useState(false)
   const [applyResult, setApplyResult] = useState<{ updated: number; skipped: number } | null>(null)
 
-  // Check if user is admin
+  // Check if user has permission to manage stats
   useEffect(() => {
-    if (user && user.role !== 'ADMIN') {
+    if (user && !canManageStats) {
       router.push('/')
     }
-  }, [user, router])
+  }, [user, canManageStats, router])
 
   // Fetch rating previews
   const fetchPreviews = async () => {

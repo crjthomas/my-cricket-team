@@ -3,15 +3,19 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { usePermissions } from '@/lib/auth-context'
 import { 
   Trophy,
   Target,
   Users,
   Award,
   BarChart3,
-  Loader2
+  Loader2,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react'
 import { cn, getFormColor } from '@/lib/utils'
 
@@ -50,6 +54,7 @@ interface TeamStats {
 }
 
 export default function StatsPage() {
+  const { canManageStats } = usePermissions()
   const [loading, setLoading] = useState(true)
   const [playerStats, setPlayerStats] = useState<PlayerStats[]>([])
   const [teamStats, setTeamStats] = useState<TeamStats>({
@@ -64,6 +69,76 @@ export default function StatsPage() {
   useEffect(() => {
     fetchStats()
   }, [])
+
+  const downloadCSV = (type: 'batting' | 'bowling' | 'fielding' | 'all') => {
+    let csvContent = ''
+    let filename = ''
+
+    if (type === 'batting' || type === 'all') {
+      const battingData = playerStats
+        .filter(p => p.runsScored > 0 || p.innings > 0)
+        .sort((a, b) => b.runsScored - a.runsScored)
+      
+      if (type === 'all') {
+        csvContent += 'BATTING STATISTICS\n'
+      }
+      csvContent += 'Player,Jersey,Innings,Runs,Average,Strike Rate,Form\n'
+      battingData.forEach(p => {
+        csvContent += `"${p.name}",${p.jerseyNumber || ''},${p.innings},${p.runsScored},${p.battingAverage.toFixed(2)},${p.strikeRate.toFixed(2)},${p.currentForm}\n`
+      })
+      if (type === 'batting') filename = 'batting_stats.csv'
+    }
+
+    if (type === 'bowling' || type === 'all') {
+      const bowlingData = playerStats
+        .filter(p => p.wicketsTaken > 0 || p.oversBowled > 0)
+        .sort((a, b) => b.wicketsTaken - a.wicketsTaken)
+      
+      if (type === 'all') {
+        csvContent += '\nBOWLING STATISTICS\n'
+      }
+      csvContent += 'Player,Jersey,Overs,Wickets,Economy,Average,Form\n'
+      bowlingData.forEach(p => {
+        csvContent += `"${p.name}",${p.jerseyNumber || ''},${p.oversBowled},${p.wicketsTaken},${p.economy.toFixed(2)},${p.bowlingAverage.toFixed(2)},${p.currentForm}\n`
+      })
+      if (type === 'bowling') filename = 'bowling_stats.csv'
+    }
+
+    if (type === 'fielding' || type === 'all') {
+      const fieldingData = playerStats
+        .filter(p => p.catches > 0 || p.stumpings > 0 || p.runOuts > 0)
+        .sort((a, b) => (b.catches + b.stumpings + b.runOuts) - (a.catches + a.stumpings + a.runOuts))
+      
+      if (type === 'all') {
+        csvContent += '\nFIELDING STATISTICS\n'
+      }
+      csvContent += 'Player,Jersey,Catches,Stumpings,Run Outs,Total Dismissals\n'
+      fieldingData.forEach(p => {
+        csvContent += `"${p.name}",${p.jerseyNumber || ''},${p.catches},${p.stumpings},${p.runOuts},${p.catches + p.stumpings + p.runOuts}\n`
+      })
+      if (type === 'fielding') filename = 'fielding_stats.csv'
+    }
+
+    if (type === 'all') {
+      csvContent += '\nTEAM OVERVIEW\n'
+      csvContent += 'Stat,Value\n'
+      csvContent += `Matches Played,${teamStats.matchesPlayed}\n`
+      csvContent += `Wins,${teamStats.wins}\n`
+      csvContent += `Losses,${teamStats.losses}\n`
+      csvContent += `Draws,${teamStats.draws}\n`
+      csvContent += `Win Rate,${teamStats.matchesPlayed > 0 ? ((teamStats.wins / teamStats.matchesPlayed) * 100).toFixed(1) : 0}%\n`
+      csvContent += `Total Runs,${teamStats.totalRuns}\n`
+      csvContent += `Total Wickets,${teamStats.totalWickets}\n`
+      filename = 'team_statistics.csv'
+    }
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }
 
   const fetchStats = async () => {
     try {
@@ -226,11 +301,53 @@ export default function StatsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Statistics</h1>
-        <p className="text-muted-foreground mt-1">
-          Season performance and player statistics
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Statistics</h1>
+          <p className="text-muted-foreground mt-1">
+            Season performance and player statistics
+          </p>
+        </div>
+        
+        {canManageStats && hasStats && (
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => downloadCSV('batting')}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Batting
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => downloadCSV('bowling')}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Bowling
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => downloadCSV('fielding')}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Fielding
+            </Button>
+            <Button 
+              size="sm" 
+              onClick={() => downloadCSV('all')}
+              className="gap-2"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Export All
+            </Button>
+          </div>
+        )}
       </div>
 
       {!hasStats ? (

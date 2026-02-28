@@ -36,11 +36,31 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const newRole = role === 'ADMIN' ? UserRole.ADMIN : UserRole.USER
+    let newRole: UserRole
+    if (role === 'ADMIN') {
+      newRole = UserRole.ADMIN
+    } else if (role === 'MEDIA_MANAGER') {
+      newRole = UserRole.MEDIA_MANAGER
+    } else {
+      newRole = UserRole.USER
+    }
 
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: { role: newRole },
+    })
+
+    const roleDisplayName = newRole === UserRole.ADMIN ? 'Admin' : newRole === UserRole.MEDIA_MANAGER ? 'Media Manager' : 'Viewer'
+
+    // Log role change activity
+    await prisma.activity.create({
+      data: {
+        type: 'USER_ROLE_CHANGED',
+        title: `${updatedUser.username}'s role changed to ${roleDisplayName}`,
+        actorName: currentUser.username,
+        entityType: 'user',
+        entityId: userId,
+      },
     })
 
     return NextResponse.json({ success: true })

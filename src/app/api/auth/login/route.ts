@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loginUser } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,6 +23,17 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       )
     }
+
+    // Log login activity
+    await prisma.activity.create({
+      data: {
+        type: 'USER_LOGIN',
+        title: `${result.user.username} logged in`,
+        actorName: result.user.username,
+        entityType: 'user',
+        entityId: result.user.id,
+      },
+    })
 
     const response = NextResponse.json({
       success: true,

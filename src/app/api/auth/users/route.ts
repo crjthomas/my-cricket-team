@@ -27,11 +27,31 @@ export async function GET(request: NextRequest) {
         isActive: true,
         lastLoginAt: true,
         createdAt: true,
+        _count: {
+          select: { sessions: true }
+        }
       },
       orderBy: { createdAt: 'desc' },
     })
 
-    return NextResponse.json({ users })
+    // Get recent activities
+    const recentActivities = await prisma.activity.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    })
+
+    // Format user data to include session count
+    const formattedUsers = users.map(u => ({
+      id: u.id,
+      username: u.username,
+      role: u.role,
+      isActive: u.isActive,
+      lastLoginAt: u.lastLoginAt,
+      createdAt: u.createdAt,
+      activeSessions: u._count.sessions,
+    }))
+
+    return NextResponse.json({ users: formattedUsers, activities: recentActivities })
   } catch (error) {
     console.error('Get users error:', error)
     return NextResponse.json({ error: 'Failed to get users' }, { status: 500 })
@@ -83,7 +103,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const userRole = role === 'ADMIN' ? UserRole.ADMIN : UserRole.USER
+    let userRole: UserRole
+    if (role === 'ADMIN') {
+      userRole = UserRole.ADMIN
+    } else if (role === 'MEDIA_MANAGER') {
+      userRole = UserRole.MEDIA_MANAGER
+    } else {
+      userRole = UserRole.USER
+    }
     const newUser = await createUser(username, password, userRole)
 
     if (!newUser) {
@@ -92,6 +119,20 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    const roleDisplayName = userRole === UserRole.ADMIN ? 'Admin' : userRole === UserRole.MEDIA_MANAGER ? 'Media Manager' : 'Viewer'
+
+    // Log user creation activity
+    await prisma.activity.create({
+      data: {
+        type: 'USER_CREATED',
+        title: `New user created: ${username}`,
+        description: `Role: ${roleDisplayName}`,
+        actorName: currentUser.username,
+        entityType: 'user',
+        entityId: newUser.id,
+      },
+    })
 
     return NextResponse.json({ user: newUser })
   } catch (error) {
