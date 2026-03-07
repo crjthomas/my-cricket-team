@@ -24,7 +24,9 @@ import {
   AlertCircle,
   Edit,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -210,6 +212,173 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     } finally {
       setIsAddingTeam(false)
     }
+  }
+
+  const downloadScheduleCSV = () => {
+    if (!tournament || tournament.rounds.length === 0) return
+
+    const allFixtures: Array<{
+      round: number
+      roundName: string
+      fixtureNum: number | null
+      homeTeam: string
+      awayTeam: string
+      date: string
+      time: string
+      venue: string
+      status: string
+      homeScore: string
+      awayScore: string
+      winner: string
+    }> = []
+
+    tournament.rounds.forEach((round) => {
+      round.fixtures.forEach((fixture) => {
+        allFixtures.push({
+          round: round.roundNumber,
+          roundName: round.roundName || `Round ${round.roundNumber}`,
+          fixtureNum: fixture.fixtureNumber,
+          homeTeam: fixture.homeTeam?.teamName || fixture.homePlaceholder || 'TBD',
+          awayTeam: fixture.awayTeam?.teamName || fixture.awayPlaceholder || 'TBD',
+          date: fixture.scheduledDate ? new Date(fixture.scheduledDate).toLocaleDateString() : 'TBD',
+          time: fixture.scheduledTime || 'TBD',
+          venue: fixture.groundSlot?.venue.name || 'TBD',
+          status: fixture.status,
+          homeScore: fixture.homeScore || '-',
+          awayScore: fixture.awayScore || '-',
+          winner: fixture.winner?.teamName || '-'
+        })
+      })
+    })
+
+    const headers = ['Match #', 'Round', 'Round Name', 'Home Team', 'Away Team', 'Date', 'Time', 'Venue', 'Status', 'Home Score', 'Away Score', 'Winner']
+    const csvRows = [
+      headers.join(','),
+      ...allFixtures.map(f => [
+        f.fixtureNum || '-',
+        f.round,
+        `"${f.roundName}"`,
+        `"${f.homeTeam}"`,
+        `"${f.awayTeam}"`,
+        f.date,
+        f.time,
+        `"${f.venue}"`,
+        f.status,
+        f.homeScore,
+        f.awayScore,
+        `"${f.winner}"`
+      ].join(','))
+    ]
+
+    const csvContent = csvRows.join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${tournament.name.replace(/[^a-zA-Z0-9]/g, '_')}_Schedule.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  const downloadSchedulePrintable = () => {
+    if (!tournament || tournament.rounds.length === 0) return
+
+    let htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>${tournament.name} - Schedule</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 1000px; margin: 0 auto; }
+    h1 { color: #0891b2; border-bottom: 2px solid #0891b2; padding-bottom: 10px; }
+    h2 { color: #374151; margin-top: 30px; }
+    .info { color: #6b7280; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+    th { background: #f3f4f6; text-align: left; padding: 10px; border: 1px solid #e5e7eb; }
+    td { padding: 10px; border: 1px solid #e5e7eb; }
+    .match-num { font-weight: bold; color: #6b7280; }
+    .winner { color: #059669; font-weight: bold; }
+    .venue { color: #6b7280; font-size: 0.9em; }
+    .time { color: #0891b2; }
+    @media print { body { padding: 0; } h1 { font-size: 24px; } }
+  </style>
+</head>
+<body>
+  <h1>${tournament.name}</h1>
+  <div class="info">
+    <p><strong>Format:</strong> ${tournament.formatType} | <strong>Match Format:</strong> ${tournament.matchFormat} (${tournament.overs} overs)</p>
+    <p><strong>Start Date:</strong> ${new Date(tournament.startDate).toLocaleDateString()}${tournament.endDate ? ` | <strong>End Date:</strong> ${new Date(tournament.endDate).toLocaleDateString()}` : ''}</p>
+    <p><strong>Teams:</strong> ${tournament.teams.length} | <strong>Total Matches:</strong> ${tournament.rounds.reduce((sum, r) => sum + r.fixtures.length, 0)}</p>
+  </div>
+`
+
+    tournament.rounds.forEach((round) => {
+      htmlContent += `
+  <h2>Round ${round.roundNumber}${round.roundName ? `: ${round.roundName}` : ''}</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Home Team</th>
+        <th>vs</th>
+        <th>Away Team</th>
+        <th>Date & Time</th>
+        <th>Venue</th>
+        <th>Result</th>
+      </tr>
+    </thead>
+    <tbody>
+`
+      round.fixtures.forEach((fixture) => {
+        const homeTeam = fixture.homeTeam?.teamName || fixture.homePlaceholder || 'TBD'
+        const awayTeam = fixture.awayTeam?.teamName || fixture.awayPlaceholder || 'TBD'
+        const isHomeWinner = fixture.winner?.id === fixture.homeTeam?.id
+        const isAwayWinner = fixture.winner?.id === fixture.awayTeam?.id
+        const dateStr = fixture.scheduledDate ? new Date(fixture.scheduledDate).toLocaleDateString() : 'TBD'
+        const timeStr = fixture.scheduledTime || ''
+        const venue = fixture.groundSlot?.venue.name || 'TBD'
+        const result = fixture.homeScore && fixture.awayScore 
+          ? `${fixture.homeScore} - ${fixture.awayScore}` 
+          : fixture.status
+
+        htmlContent += `
+      <tr>
+        <td class="match-num">${fixture.fixtureNumber || '-'}</td>
+        <td${isHomeWinner ? ' class="winner"' : ''}>${homeTeam}</td>
+        <td>vs</td>
+        <td${isAwayWinner ? ' class="winner"' : ''}>${awayTeam}</td>
+        <td><span class="time">${dateStr}${timeStr ? ` ${timeStr}` : ''}</span></td>
+        <td class="venue">${venue}</td>
+        <td>${result}</td>
+      </tr>
+`
+      })
+
+      htmlContent += `
+    </tbody>
+  </table>
+`
+    })
+
+    htmlContent += `
+  <div style="margin-top: 40px; text-align: center; color: #9ca3af; font-size: 0.8em;">
+    Generated on ${new Date().toLocaleString()}
+  </div>
+</body>
+</html>
+`
+
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${tournament.name.replace(/[^a-zA-Z0-9]/g, '_')}_Schedule.html`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   const getStatusBadge = (status: string) => {
@@ -538,6 +707,35 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
       {activeTab === 'fixtures' && (
         <div className="space-y-4">
+          {/* Download Options */}
+          {tournament.rounds.length > 0 && (
+            <Card className="bg-gradient-to-r from-cyan-50 to-blue-50 border-cyan-200">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-cyan-100 flex items-center justify-center">
+                      <Download className="h-5 w-5 text-cyan-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Download Schedule</h4>
+                      <p className="text-sm text-muted-foreground">Export for offline use or printing</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="gap-2" onClick={downloadScheduleCSV}>
+                      <FileSpreadsheet className="h-4 w-4" />
+                      CSV (Excel)
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-2" onClick={downloadSchedulePrintable}>
+                      <Download className="h-4 w-4" />
+                      Printable HTML
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {tournament.rounds.length === 0 ? (
             <Card>
               <CardContent className="py-16 text-center">
