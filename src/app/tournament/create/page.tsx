@@ -15,8 +15,6 @@ import {
   Calendar,
   Sparkles,
   CheckCircle2,
-  Upload,
-  FileText,
   Users,
   MapPin,
   Clock,
@@ -36,10 +34,13 @@ interface TournamentFormData {
   matchFormat: MatchFormat
   overs: number
   totalRounds: number | null
+  numberOfVenues: number
+  slotsPerVenue: number
   matchesPerDay: number
   matchDuration: number
   breakBetween: number
   formatDocument: string
+  customRulesText: string
   aiParsedRules: object | null
 }
 
@@ -60,10 +61,13 @@ export default function CreateTournamentPage() {
     matchFormat: 'T20',
     overs: 20,
     totalRounds: null,
-    matchesPerDay: 4,
+    numberOfVenues: 6,
+    slotsPerVenue: 2,   // Morning and afternoon
+    matchesPerDay: 12,  // 6 venues x 2 slots
     matchDuration: 180,
     breakBetween: 30,
     formatDocument: '',
+    customRulesText: '',
     aiParsedRules: null
   })
 
@@ -337,51 +341,10 @@ export default function CreateTournamentPage() {
               Tournament Format
             </CardTitle>
             <CardDescription>
-              Choose a format or upload a document for AI analysis
+              Choose a format or upload rules document for AI analysis
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* AI Document Upload */}
-            <div className="p-4 bg-cyan-50 rounded-lg border border-cyan-200">
-              <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-lg bg-cyan-100 flex items-center justify-center flex-shrink-0">
-                  <Zap className="h-5 w-5 text-cyan-600" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-cyan-800">AI Format Analysis</h4>
-                  <p className="text-sm text-cyan-600 mb-3">
-                    Paste a URL to your format document and AI will extract the rules
-                  </p>
-                  <div className="flex gap-2">
-                    <input
-                      type="url"
-                      value={formData.formatDocument}
-                      onChange={(e) => setFormData({ ...formData, formatDocument: e.target.value })}
-                      className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                      placeholder="https://docs.google.com/..."
-                    />
-                    <Button 
-                      onClick={handleAnalyzeFormat}
-                      disabled={!formData.formatDocument || aiAnalyzing}
-                      className="gap-2"
-                    >
-                      {aiAnalyzing ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="h-4 w-4" />
-                      )}
-                      Analyze
-                    </Button>
-                  </div>
-                  {aiSuggestions && (
-                    <div className="mt-3 p-3 bg-white rounded border border-cyan-200">
-                      <p className="text-sm text-cyan-700">{aiSuggestions}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
             {/* Format Selection */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Tournament Format *</label>
@@ -428,6 +391,93 @@ export default function CreateTournamentPage() {
               </div>
             )}
 
+            {/* Format Rules Document - Available for all formats */}
+            <div className={cn(
+              "p-4 rounded-lg border",
+              formData.formatType === 'CUSTOM' 
+                ? "bg-purple-50 border-purple-200" 
+                : "bg-cyan-50 border-cyan-200"
+            )}>
+              <div className="flex items-start gap-3">
+                <div className={cn(
+                  "h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                  formData.formatType === 'CUSTOM' ? "bg-purple-100" : "bg-cyan-100"
+                )}>
+                  <Zap className={cn(
+                    "h-5 w-5",
+                    formData.formatType === 'CUSTOM' ? "text-purple-600" : "text-cyan-600"
+                  )} />
+                </div>
+                <div className="flex-1">
+                  <h4 className={cn(
+                    "font-medium",
+                    formData.formatType === 'CUSTOM' ? "text-purple-800" : "text-cyan-800"
+                  )}>
+                    {formData.formatType === 'CUSTOM' 
+                      ? 'Upload Custom Format Rules (Required)' 
+                      : 'Format Rules Document (Optional)'}
+                  </h4>
+                  <p className={cn(
+                    "text-sm mb-3",
+                    formData.formatType === 'CUSTOM' ? "text-purple-600" : "text-cyan-600"
+                  )}>
+                    {formData.formatType === 'CUSTOM'
+                      ? 'Upload your tournament rules document and AI will extract the scheduling rules'
+                      : 'Upload additional rules or modifications to the standard format'}
+                  </p>
+                  
+                  {/* URL Input */}
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={formData.formatDocument}
+                        onChange={(e) => setFormData({ ...formData, formatDocument: e.target.value })}
+                        className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-white"
+                        placeholder="https://docs.google.com/... or paste document URL"
+                      />
+                      <Button 
+                        onClick={handleAnalyzeFormat}
+                        disabled={!formData.formatDocument || aiAnalyzing}
+                        className="gap-2"
+                        variant={formData.formatType === 'CUSTOM' ? 'default' : 'outline'}
+                      >
+                        {aiAnalyzing ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-4 w-4" />
+                        )}
+                        Analyze with AI
+                      </Button>
+                    </div>
+                    
+                    {/* Manual Rules Input for Custom Format */}
+                    {formData.formatType === 'CUSTOM' && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-purple-700">
+                          Or describe the rules manually:
+                        </label>
+                        <textarea
+                          value={formData.customRulesText || ''}
+                          onChange={(e) => setFormData({ ...formData, customRulesText: e.target.value })}
+                          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                          placeholder="Describe the tournament format rules...&#10;&#10;Example:&#10;- Teams are paired based on points&#10;- Tiebreaker: Net Run Rate&#10;- Top 4 teams qualify for knockouts"
+                          rows={5}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {aiSuggestions && (
+                    <div className="mt-3 p-3 bg-white rounded border border-cyan-200">
+                      <p className="text-sm text-cyan-700 font-medium mb-1">AI Analysis:</p>
+                      <p className="text-sm text-cyan-700">{aiSuggestions}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div className="flex justify-between">
               <Button variant="outline" onClick={() => setStep(1)} className="gap-2">
                 <ArrowLeft className="h-4 w-4" />
@@ -455,18 +505,64 @@ export default function CreateTournamentPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Matches per Day</label>
-                <input
-                  type="number"
-                  value={formData.matchesPerDay}
-                  onChange={(e) => setFormData({ ...formData, matchesPerDay: parseInt(e.target.value) || 4 })}
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                  min={1}
-                  max={10}
-                />
+            {/* Venue Configuration */}
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h4 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Venue Configuration
+              </h4>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Number of Venues</label>
+                  <input
+                    type="number"
+                    value={formData.numberOfVenues}
+                    onChange={(e) => {
+                      const venues = parseInt(e.target.value) || 6
+                      setFormData({ 
+                        ...formData, 
+                        numberOfVenues: venues,
+                        matchesPerDay: venues * formData.slotsPerVenue
+                      })
+                    }}
+                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    min={1}
+                    max={20}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Slots per Venue</label>
+                  <select
+                    value={formData.slotsPerVenue}
+                    onChange={(e) => {
+                      const slots = parseInt(e.target.value) || 2
+                      setFormData({ 
+                        ...formData, 
+                        slotsPerVenue: slots,
+                        matchesPerDay: formData.numberOfVenues * slots
+                      })
+                    }}
+                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  >
+                    <option value={1}>1 (Single session)</option>
+                    <option value={2}>2 (Morning + Afternoon)</option>
+                    <option value={3}>3 (Morning + Afternoon + Evening)</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Total Matches/Day</label>
+                  <div className="px-3 py-2 bg-white border rounded-md text-lg font-semibold text-cyan-700">
+                    {formData.matchesPerDay}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {formData.numberOfVenues} venues × {formData.slotsPerVenue} slots
+                  </p>
+                </div>
               </div>
+            </div>
+
+            {/* Time Configuration */}
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Match Duration (min)</label>
                 <input
@@ -479,7 +575,7 @@ export default function CreateTournamentPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Break Between (min)</label>
+                <label className="text-sm font-medium">Break Between Slots (min)</label>
                 <input
                   type="number"
                   value={formData.breakBetween}

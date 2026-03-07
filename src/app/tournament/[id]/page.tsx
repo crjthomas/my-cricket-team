@@ -428,13 +428,21 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
             <CardContent className="space-y-3">
               {canManageTournaments && (
                 <>
-                  <Button className="w-full justify-start gap-2" variant="outline">
+                  <Button 
+                    className="w-full justify-start gap-2" 
+                    variant="outline"
+                    onClick={() => setActiveTab('teams')}
+                  >
                     <Users className="h-4 w-4" />
                     Manage Teams
                   </Button>
-                  <Button className="w-full justify-start gap-2" variant="outline">
+                  <Button 
+                    className="w-full justify-start gap-2" 
+                    variant="outline"
+                    onClick={() => router.push(`/tournament/${resolvedParams.id}/venues`)}
+                  >
                     <MapPin className="h-4 w-4" />
-                    Manage Ground Slots
+                    Venue Availability
                   </Button>
                   <Button className="w-full justify-start gap-2" variant="outline">
                     <Calendar className="h-4 w-4" />

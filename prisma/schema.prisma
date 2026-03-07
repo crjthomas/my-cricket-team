@@ -789,7 +789,8 @@ model Tournament {
   // Configuration
   totalRounds     Int?
   teamsPerMatch   Int      @default(2)   // Usually 2 for cricket
-  matchesPerDay   Int      @default(4)
+  matchesPerDay   Int      @default(12)  // 6 venues x 2 slots per day
+  slotsPerVenue   Int      @default(2)   // Morning and afternoon slots
   matchDuration   Int      @default(180)  // minutes
   breakBetween    Int      @default(30)   // minutes between matches
   matchFormat     MatchFormat @default(T20)
