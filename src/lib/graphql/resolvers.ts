@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { generateSquadRecommendation } from '@/lib/ai/squad-selector'
 import { analyzeFormatDocument } from '@/lib/ai/tournament-scheduler'
+import { processNLQuery } from '@/lib/ai/nl-query'
 import { calculatePlayerRatingChanges, calculateAllPlayerRatingChanges, applyRatingChanges } from '@/lib/rating-calculator'
 import { GraphQLScalarType, Kind } from 'graphql'
 import type { Player, SeasonStats, Match, Opponent, Season, Squad, SquadPlayer, PlayerAvailability, RatingHistory } from '@prisma/client'
@@ -1972,6 +1973,111 @@ export const resolvers = {
           tiebreakerRules: [],
           specialRules: [],
           suggestions: 'AI analysis failed. Please describe the format manually or try again.'
+        }
+      }
+    },
+
+    askTeamAssistant: async (
+      _: unknown,
+      { input }: { input: { query: string } }
+    ) => {
+      const { query } = input
+
+      if (!query || query.trim().length < 3) {
+        return {
+          answer: 'Please ask a question about your team.',
+          relevantPlayers: [],
+          suggestions: ['Who is the captain?', 'Best batsmen?', 'Who needs more game time?'],
+          confidence: 'LOW',
+          queryType: 'GENERAL'
+        }
+      }
+
+      try {
+        // Fetch all active players with their stats
+        const players = await prisma.player.findMany({
+          where: {},
+          include: {
+            seasonStats: {
+              take: 1,
+              orderBy: { seasonId: 'desc' }
+            }
+          }
+        })
+
+        // Get active season stats
+        const activeSeason = await prisma.season.findFirst({
+          where: { isActive: true }
+        })
+
+        // Get recent matches
+        const recentMatches = await prisma.match.findMany({
+          where: { status: 'COMPLETED' },
+          take: 5,
+          orderBy: { matchDate: 'desc' },
+          include: { opponent: true }
+        })
+
+        // Get upcoming match
+        const upcomingMatch = await prisma.match.findFirst({
+          where: { status: 'UPCOMING' },
+          orderBy: { matchDate: 'asc' },
+          include: { opponent: true, venue: true }
+        })
+
+        // Format context for NL query
+        const playerContext = players.map(p => {
+          const stats = p.seasonStats[0]
+          return {
+            id: p.id,
+            name: p.name,
+            role: p.primaryRole,
+            battingSkill: p.battingSkill,
+            bowlingSkill: p.bowlingSkill,
+            fieldingSkill: p.fieldingSkill,
+            form: stats?.currentForm || 'UNKNOWN',
+            matchesPlayed: stats?.matchesPlayed || 0,
+            matchesAvailable: stats?.matchesAvailable || 0,
+            isActive: p.isActive,
+            isCaptain: p.isCaptain,
+            isViceCaptain: p.isViceCaptain,
+            isWicketkeeper: p.isWicketkeeper
+          }
+        })
+
+        const result = await processNLQuery({
+          query: sanitizeString(query, 500) || '',
+          context: {
+            players: playerContext,
+            recentMatches: recentMatches.map(m => ({
+              opponent: m.opponent.name,
+              date: m.matchDate.toISOString().split('T')[0],
+              result: m.result || undefined
+            })),
+            upcomingMatch: upcomingMatch ? {
+              opponent: upcomingMatch.opponent.name,
+              date: upcomingMatch.matchDate.toISOString().split('T')[0],
+              venue: upcomingMatch.venue?.name
+            } : undefined,
+            seasonStats: activeSeason ? {
+              matchesPlayed: activeSeason.matchesPlayed,
+              wins: activeSeason.wins,
+              losses: activeSeason.losses,
+              draws: activeSeason.draws,
+              position: activeSeason.currentPosition || undefined
+            } : undefined
+          }
+        })
+
+        return result
+      } catch (error) {
+        console.error('NL Query error:', error)
+        return {
+          answer: 'Sorry, I encountered an error processing your question. Please try again.',
+          relevantPlayers: [],
+          suggestions: ['Who is the captain?', 'Best batsmen?', 'Who needs more game time?'],
+          confidence: 'LOW',
+          queryType: 'GENERAL'
         }
       }
     },

@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { Player, SeasonStats, Match, Opponent, Venue, Season } from '@prisma/client'
+import { aiCache, CacheKeys } from './cache'
 
 type PlayerWithStats = Player & { stats?: SeasonStats | null }
 
@@ -160,11 +161,30 @@ Remember:
 export async function generateSquadRecommendation(
   input: SquadRecommendationInput
 ): Promise<SquadRecommendation> {
-  const { players } = input
+  const { players, match, opponent, venue, mode } = input
+
+  // Generate cache key from match context
+  const cacheKey = {
+    matchId: match.id,
+    opponentId: opponent.id,
+    venueId: venue.id,
+    mode,
+    playerCount: players.length,
+    playerHash: players.map(p => `${p.id}:${p.stats?.currentForm || 'U'}`).join(',').substring(0, 100)
+  }
+
+  // Check cache first (cache for 15 minutes)
+  const cached = aiCache.get<SquadRecommendation>(CacheKeys.SQUAD_RECOMMENDATION, cacheKey)
+  if (cached) {
+    console.log('Returning cached squad recommendation')
+    return cached
+  }
 
   // If API key is not set, use fallback logic
   if (!process.env.ANTHROPIC_API_KEY) {
-    return generateFallbackRecommendation(input)
+    const fallback = generateFallbackRecommendation(input)
+    aiCache.set(CacheKeys.SQUAD_RECOMMENDATION, cacheKey, fallback, { ttlMinutes: 15 })
+    return fallback
   }
 
   try {
@@ -231,7 +251,7 @@ export async function generateSquadRecommendation(
       }
     }
 
-    return {
+    const result: SquadRecommendation = {
       selectedPlayers,
       reasoning: aiResult.reasoning || 'AI-generated squad selection',
       teamBalance: aiResult.teamBalance || calculateTeamBalance(selectedPlayers.map((sp) => sp.player)),
@@ -240,9 +260,16 @@ export async function generateSquadRecommendation(
       warnings: aiResult.warnings || [],
       insights: aiResult.insights || [],
     }
+
+    // Cache the result for 15 minutes
+    aiCache.set(CacheKeys.SQUAD_RECOMMENDATION, cacheKey, result, { ttlMinutes: 15 })
+    
+    return result
   } catch (error) {
     console.error('AI squad generation error:', error)
-    return generateFallbackRecommendation(input)
+    const fallback = generateFallbackRecommendation(input)
+    aiCache.set(CacheKeys.SQUAD_RECOMMENDATION, cacheKey, fallback, { ttlMinutes: 15 })
+    return fallback
   }
 }
 

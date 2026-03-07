@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { AIAssistant } from '@/components/ai/ai-assistant'
 
 interface Season {
   id: string
@@ -456,6 +457,9 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Team Assistant */}
+      <AIAssistant />
     </div>
   )
 }

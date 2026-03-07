@@ -1,65 +1,16 @@
+/**
+ * AI Tournament Scheduler Service
+ * Handles AI-powered tournament format analysis and scheduling assistance
+ */
+
 import Anthropic from '@anthropic-ai/sdk'
-import type { Tournament, TournamentTeam, TournamentRound, TournamentFixture, GroundSlot, Venue } from '@prisma/client'
 
-type TeamWithStats = TournamentTeam & {
-  opponents?: string[]
-}
-
-type GroundSlotWithVenue = GroundSlot & {
-  venue: Venue
-}
-
-interface SwissPairingInput {
-  tournament: Tournament
-  teams: TeamWithStats[]
-  roundNumber: number
-  previousPairings: { homeTeamId: string; awayTeamId: string }[]
-  availableSlots: GroundSlotWithVenue[]
-}
-
-interface PairingRecommendation {
-  homeTeamId: string
-  awayTeamId: string
-  homeTeamName: string
-  awayTeamName: string
-  slotId?: string
-  reason: string
-}
-
-interface SwissPairingResult {
-  pairings: PairingRecommendation[]
-  reasoning: string
-  notes: string[]
-  warnings: string[]
-}
-
-interface RescheduleInput {
-  tournament: Tournament
-  fixture: TournamentFixture & { homeTeam?: TournamentTeam; awayTeam?: TournamentTeam }
-  reason: string
-  availableSlots: GroundSlotWithVenue[]
-  constraints?: {
-    preferredDates?: string[]
-    avoidDates?: string[]
-    preferredVenues?: string[]
-  }
-}
-
-interface RescheduleRecommendation {
-  newSlotId: string
-  newDate: string
-  newTime: string
-  venue: string
-  reason: string
-  impactAnalysis: string
-}
-
-interface FormatAnalysisInput {
+export interface FormatAnalysisInput {
   documentText: string
 }
 
-interface FormatAnalysisResult {
-  formatType: string
+export interface FormatAnalysisResult {
+  formatType: 'SWISS' | 'KNOCKOUT' | 'ROUND_ROBIN' | 'GROUP_STAGE_KNOCKOUT' | 'DOUBLE_ELIMINATION' | 'CUSTOM'
   totalRounds: number | null
   pairingRules: string[]
   tiebreakerRules: string[]
@@ -67,93 +18,165 @@ interface FormatAnalysisResult {
   suggestions: string
 }
 
+export interface SwissPairingInput {
+  teams: TeamStanding[]
+  roundNumber: number
+  previousMatchups: string[][]
+}
+
+export interface TeamStanding {
+  id: string
+  name: string
+  points: number
+  buchholzScore: number
+  wins: number
+  losses: number
+  draws: number
+}
+
+export interface SwissPairingResult {
+  pairings: Array<{ homeTeam: string; awayTeam: string; reason: string }>
+  byeTeam?: string
+  notes: string[]
+}
+
+export interface RescheduleInput {
+  fixture: {
+    id: string
+    homeTeam: string
+    awayTeam: string
+    originalDate: string
+    originalVenue: string
+  }
+  reason: string
+  availableSlots: Array<{
+    date: string
+    venue: string
+    time: string
+    slotId: string
+  }>
+  constraints?: string[]
+}
+
+export interface RescheduleResult {
+  recommendedSlot: {
+    slotId: string
+    date: string
+    venue: string
+    time: string
+    reason: string
+  } | null
+  alternativeSlots: Array<{
+    slotId: string
+    date: string
+    venue: string
+    time: string
+    reason: string
+  }>
+  notes: string[]
+}
+
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
 })
 
-function formatTeamData(team: TeamWithStats): string {
-  return `
-- ${team.teamName}${team.shortName ? ` (${team.shortName})` : ''}
-  Seed: ${team.seedRank || 'Unseeded'}
-  Points: ${team.points} | W-L-D: ${team.wins}-${team.losses}-${team.draws}
-  Buchholz: ${team.buchholzScore.toFixed(1)}
-  ${team.groupName ? `Group: ${team.groupName}` : ''}
-  ${team.isConfirmed ? '✓ Confirmed' : '⏳ Pending'}
-  Opponents played: ${team.opponents?.join(', ') || 'None yet'}`
+function analyzeFormatManually(text: string): FormatAnalysisResult {
+  const lowerText = text.toLowerCase()
+  
+  let formatType: FormatAnalysisResult['formatType'] = 'CUSTOM'
+  if (lowerText.includes('swiss')) {
+    formatType = 'SWISS'
+  } else if (lowerText.includes('knockout') || lowerText.includes('elimination') || lowerText.includes('single elimination')) {
+    formatType = 'KNOCKOUT'
+  } else if (lowerText.includes('round robin') || lowerText.includes('round-robin')) {
+    formatType = 'ROUND_ROBIN'
+  } else if (lowerText.includes('group') && (lowerText.includes('knockout') || lowerText.includes('final'))) {
+    formatType = 'GROUP_STAGE_KNOCKOUT'
+  } else if (lowerText.includes('double elimination')) {
+    formatType = 'DOUBLE_ELIMINATION'
+  }
+
+  let totalRounds: number | null = null
+  const roundMatch = text.match(/(\d+)\s*(rounds?|stages?)/i)
+  if (roundMatch) {
+    totalRounds = parseInt(roundMatch[1])
+  }
+
+  const pairingRules: string[] = []
+  const tiebreakerRules: string[] = []
+  const specialRules: string[] = []
+
+  if (lowerText.includes('points') || lowerText.includes('standings')) {
+    pairingRules.push('Teams paired based on standings/points')
+  }
+  if (lowerText.includes('random') || lowerText.includes('draw')) {
+    pairingRules.push('Random pairing for initial rounds')
+  }
+  if (lowerText.includes('seed')) {
+    pairingRules.push('Seeded pairing based on rankings')
+  }
+
+  if (lowerText.includes('net run rate') || lowerText.includes('nrr')) {
+    tiebreakerRules.push('Net Run Rate (NRR)')
+  }
+  if (lowerText.includes('head to head') || lowerText.includes('head-to-head')) {
+    tiebreakerRules.push('Head-to-head record')
+  }
+  if (lowerText.includes('buchholz')) {
+    tiebreakerRules.push('Buchholz score (sum of opponents points)')
+  }
+  if ((lowerText.includes('goal') || lowerText.includes('run')) && lowerText.includes('difference')) {
+    tiebreakerRules.push('Run/Goal difference')
+  }
+
+  const formatNames: Record<string, string> = {
+    'SWISS': 'Swiss System',
+    'KNOCKOUT': 'Knockout',
+    'ROUND_ROBIN': 'Round Robin',
+    'GROUP_STAGE_KNOCKOUT': 'Groups + Knockout',
+    'DOUBLE_ELIMINATION': 'Double Elimination',
+    'CUSTOM': 'Custom Format'
+  }
+
+  return {
+    formatType,
+    totalRounds,
+    pairingRules: pairingRules.length > 0 ? pairingRules : ['Configure pairing rules manually'],
+    tiebreakerRules: tiebreakerRules.length > 0 ? tiebreakerRules : ['Configure tiebreaker rules manually'],
+    specialRules,
+    suggestions: `Detected: ${formatNames[formatType]}${totalRounds ? ` with ${totalRounds} rounds` : ''}. ${pairingRules.length > 0 || tiebreakerRules.length > 0 ? 'Some rules were extracted from your text.' : 'Please review and configure the detailed rules manually.'}`
+  }
 }
 
-function formatSlotData(slot: GroundSlotWithVenue): string {
-  const date = new Date(slot.date).toLocaleDateString('en-US', { 
-    weekday: 'short', 
-    month: 'short', 
-    day: 'numeric' 
-  })
-  return `- Slot ${slot.id.slice(-6)}: ${slot.venue.name} on ${date} (${slot.startTime}-${slot.endTime})${slot.isPrimary ? ' [Primary]' : ''}`
-}
+export async function analyzeFormatDocument(input: FormatAnalysisInput): Promise<FormatAnalysisResult> {
+  const { documentText } = input
 
-export async function generateSwissPairings(input: SwissPairingInput): Promise<SwissPairingResult> {
-  const { tournament, teams, roundNumber, previousPairings, availableSlots } = input
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.log('ANTHROPIC_API_KEY not set, using manual analysis')
+    return analyzeFormatManually(documentText)
+  }
 
-  const activeTeams = teams.filter(t => !t.isWithdrawn)
-  const teamData = activeTeams.map(formatTeamData).join('\n')
-  const slotData = availableSlots.filter(s => s.isAvailable && !s.isBlocked).map(formatSlotData).join('\n')
+  const prompt = `Analyze this tournament format document and extract the key rules.
 
-  const previousPairingsList = previousPairings.map(p => {
-    const home = teams.find(t => t.id === p.homeTeamId)
-    const away = teams.find(t => t.id === p.awayTeamId)
-    return `${home?.teamName || 'Unknown'} vs ${away?.teamName || 'Unknown'}`
-  }).join('\n')
+DOCUMENT:
+${documentText}
 
-  const prompt = `You are an expert tournament scheduler specializing in Swiss system tournaments.
-
-## TOURNAMENT: ${tournament.name}
-Format: ${tournament.formatType}
-Total Rounds: ${tournament.totalRounds || 'TBD'}
-Current Round: ${roundNumber}
-Match Format: ${tournament.matchFormat} (${tournament.overs} overs)
-
-## SWISS SYSTEM RULES
-1. Teams with similar points should play each other (pairing by score)
-2. No team should play the same opponent twice
-3. Each team plays exactly once per round
-4. If odd number of teams, one team gets a bye (counts as a win with default points)
-5. Consider Buchholz score (sum of opponents' scores) as first tiebreaker
-6. Avoid back-to-back games at the same venue for a team if possible
-
-## ACTIVE TEAMS (${activeTeams.length})
-${teamData}
-
-## PREVIOUS PAIRINGS (to avoid repeats)
-${previousPairingsList || 'None - this is Round 1'}
-
-## AVAILABLE GROUND SLOTS
-${slotData || 'No slots specified yet'}
-
-## TASK
-Generate optimal pairings for Round ${roundNumber}. For each pairing:
-1. Select two teams that haven't played each other
-2. Prioritize matching teams with similar points
-3. Assign an appropriate ground slot if available
-4. Explain the reasoning
-
-Respond in this exact JSON format:
+Extract and respond with a JSON object (no markdown):
 {
-  "pairings": [
-    {
-      "homeTeamId": "team-id-1",
-      "awayTeamId": "team-id-2",
-      "homeTeamName": "Team Name 1",
-      "awayTeamName": "Team Name 2",
-      "slotId": "slot-id or null",
-      "reason": "Brief explanation of why these teams are paired"
-    }
-  ],
-  "reasoning": "Overall explanation of the pairing strategy",
-  "notes": ["Important notes about the pairings"],
-  "warnings": ["Any concerns or issues to address"]
+  "formatType": "SWISS" | "KNOCKOUT" | "ROUND_ROBIN" | "GROUP_STAGE_KNOCKOUT" | "DOUBLE_ELIMINATION" | "CUSTOM",
+  "totalRounds": number or null,
+  "pairingRules": ["How teams are paired each round"],
+  "tiebreakerRules": ["Rules for breaking ties"],
+  "specialRules": ["Any special rules or modifications"],
+  "suggestions": "Brief suggestions for the tournament manager"
 }
 
-Important: Return ONLY valid JSON, no markdown or explanations outside the JSON.`
+Focus on:
+1. Format type (Swiss, knockout, round-robin, etc.)
+2. How teams are paired/matched
+3. Tiebreaker rules
+4. Point systems
+5. Any unique modifications to standard formats`
 
   try {
     const response = await anthropic.messages.create({
@@ -167,68 +190,52 @@ Important: Return ONLY valid JSON, no markdown or explanations outside the JSON.
       throw new Error('Unexpected response type')
     }
 
-    const result = JSON.parse(content.text.trim())
-    return result as SwissPairingResult
-  } catch (error) {
-    console.error('Swiss pairing AI error:', error)
-    return {
-      pairings: [],
-      reasoning: 'AI pairing failed - manual pairing required',
-      notes: [],
-      warnings: ['AI service error: ' + (error instanceof Error ? error.message : 'Unknown error')],
+    let jsonText = content.text.trim()
+    const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (jsonMatch) {
+      jsonText = jsonMatch[1].trim()
     }
+
+    const result = JSON.parse(jsonText)
+    return result as FormatAnalysisResult
+  } catch (error) {
+    console.error('Format analysis AI error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    
+    const manualResult = analyzeFormatManually(documentText)
+    manualResult.suggestions = `AI analysis failed: ${errorMessage}. ${manualResult.suggestions}`
+    return manualResult
   }
 }
 
-export async function suggestReschedule(input: RescheduleInput): Promise<RescheduleRecommendation[]> {
-  const { tournament, fixture, reason, availableSlots, constraints } = input
+export async function generateSwissPairings(input: SwissPairingInput): Promise<SwissPairingResult> {
+  const { teams, roundNumber, previousMatchups } = input
 
-  const slotData = availableSlots
-    .filter(s => s.isAvailable && !s.isBlocked)
-    .map(formatSlotData)
-    .join('\n')
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return generateSwissPairingsManually(input)
+  }
 
-  const prompt = `You are an expert tournament scheduler helping to reschedule a cricket match.
+  const prompt = `Generate Swiss system pairings for Round ${roundNumber}.
 
-## TOURNAMENT: ${tournament.name}
-Format: ${tournament.matchFormat} (${tournament.overs} overs)
+CURRENT STANDINGS:
+${teams.map((t, i) => `${i + 1}. ${t.name} - ${t.points} pts, W${t.wins} L${t.losses} D${t.draws}, Buchholz: ${t.buchholzScore}`).join('\n')}
 
-## MATCH TO RESCHEDULE
-${fixture.homeTeam?.teamName || fixture.homePlaceholder || 'TBD'} vs ${fixture.awayTeam?.teamName || fixture.awayPlaceholder || 'TBD'}
-Original Date: ${fixture.scheduledDate ? new Date(fixture.scheduledDate).toLocaleDateString() : 'Not set'}
-Original Time: ${fixture.scheduledTime || 'Not set'}
-Reason for reschedule: ${reason}
+PREVIOUS MATCHUPS (teams that have already played each other):
+${previousMatchups.map(m => m.join(' vs ')).join('\n') || 'None'}
 
-## CONSTRAINTS
-Preferred dates: ${constraints?.preferredDates?.join(', ') || 'None specified'}
-Dates to avoid: ${constraints?.avoidDates?.join(', ') || 'None'}
-Preferred venues: ${constraints?.preferredVenues?.join(', ') || 'Any'}
+SWISS PAIRING RULES:
+1. Teams with similar points should be paired
+2. Avoid repeat matchups when possible
+3. If odd number of teams, assign a bye to lowest-ranked team that hasn't had a bye
 
-## AVAILABLE SLOTS
-${slotData || 'No available slots'}
-
-## TASK
-Suggest the best rescheduling options considering:
-1. Minimal disruption to the tournament schedule
-2. Fair notice period for teams
-3. Venue availability and preference
-4. Impact on other matches
-
-Respond in this exact JSON format:
+Respond with JSON (no markdown):
 {
-  "recommendations": [
-    {
-      "newSlotId": "slot-id",
-      "newDate": "YYYY-MM-DD",
-      "newTime": "HH:MM",
-      "venue": "Venue Name",
-      "reason": "Why this slot is recommended",
-      "impactAnalysis": "How this affects other matches/teams"
-    }
-  ]
-}
-
-Return ONLY valid JSON.`
+  "pairings": [
+    { "homeTeam": "Team A ID", "awayTeam": "Team B ID", "reason": "Both teams on X points" }
+  ],
+  "byeTeam": "Team ID or null",
+  "notes": ["Any notes about the pairing"]
+}`
 
   try {
     const response = await anthropic.messages.create({
@@ -242,59 +249,131 @@ Return ONLY valid JSON.`
       throw new Error('Unexpected response type')
     }
 
-    const result = JSON.parse(content.text.trim())
-    return result.recommendations as RescheduleRecommendation[]
+    let jsonText = content.text.trim()
+    const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (jsonMatch) {
+      jsonText = jsonMatch[1].trim()
+    }
+
+    return JSON.parse(jsonText) as SwissPairingResult
   } catch (error) {
-    console.error('Reschedule AI error:', error)
-    return []
+    console.error('Swiss pairing AI error:', error)
+    return generateSwissPairingsManually(input)
   }
 }
 
-export async function analyzeFormatDocument(input: FormatAnalysisInput): Promise<FormatAnalysisResult> {
-  const { documentText } = input
+function generateSwissPairingsManually(input: SwissPairingInput): SwissPairingResult {
+  const { teams, previousMatchups } = input
+  
+  const sortedTeams = [...teams].sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points
+    return b.buchholzScore - a.buchholzScore
+  })
 
-  // Check for API key
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('ANTHROPIC_API_KEY is not set')
-    return {
-      formatType: 'CUSTOM',
-      totalRounds: null,
-      pairingRules: [],
-      tiebreakerRules: [],
-      specialRules: [],
-      suggestions: 'AI analysis not available. API key not configured. Please configure the format manually.',
+  const pairings: SwissPairingResult['pairings'] = []
+  const paired = new Set<string>()
+  let byeTeam: string | undefined
+
+  const hasPlayed = (t1: string, t2: string) => {
+    return previousMatchups.some(m => 
+      (m[0] === t1 && m[1] === t2) || (m[0] === t2 && m[1] === t1)
+    )
+  }
+
+  for (let i = 0; i < sortedTeams.length; i++) {
+    const team1 = sortedTeams[i]
+    if (paired.has(team1.id)) continue
+
+    let found = false
+    for (let j = i + 1; j < sortedTeams.length; j++) {
+      const team2 = sortedTeams[j]
+      if (paired.has(team2.id)) continue
+      if (hasPlayed(team1.id, team2.id)) continue
+
+      pairings.push({
+        homeTeam: team1.id,
+        awayTeam: team2.id,
+        reason: `Ranked ${i + 1} vs ${j + 1} by standings`
+      })
+      paired.add(team1.id)
+      paired.add(team2.id)
+      found = true
+      break
+    }
+
+    if (!found && !paired.has(team1.id)) {
+      for (let j = i + 1; j < sortedTeams.length; j++) {
+        const team2 = sortedTeams[j]
+        if (paired.has(team2.id)) continue
+
+        pairings.push({
+          homeTeam: team1.id,
+          awayTeam: team2.id,
+          reason: `Repeat matchup necessary`
+        })
+        paired.add(team1.id)
+        paired.add(team2.id)
+        found = true
+        break
+      }
+    }
+
+    if (!found && !paired.has(team1.id)) {
+      byeTeam = team1.id
+      paired.add(team1.id)
     }
   }
 
-  const prompt = `You are an expert in cricket tournament formats. Analyze the following tournament format document and extract the key rules.
-
-## DOCUMENT CONTENT
-${documentText.slice(0, 10000)}
-
-## TASK
-Extract and summarize:
-1. Tournament format type (Swiss, Knockout, Round Robin, Groups+Knockout, etc.)
-2. Number of rounds or stages
-3. Pairing rules (how teams are matched each round)
-4. Tiebreaker rules (how standings are determined)
-5. Any special rules or conditions
-
-Respond in this exact JSON format:
-{
-  "formatType": "SWISS" | "KNOCKOUT" | "ROUND_ROBIN" | "GROUP_STAGE_KNOCKOUT" | "DOUBLE_ELIMINATION" | "CUSTOM",
-  "totalRounds": number or null,
-  "pairingRules": ["Rule 1", "Rule 2"],
-  "tiebreakerRules": ["Tiebreaker 1", "Tiebreaker 2"],
-  "specialRules": ["Special rule 1"],
-  "suggestions": "Summary of the format and recommendations for setup"
+  return {
+    pairings,
+    byeTeam,
+    notes: ['Pairings generated using basic Swiss algorithm']
+  }
 }
 
-Return ONLY valid JSON.`
+export async function suggestReschedule(input: RescheduleInput): Promise<RescheduleResult> {
+  const { fixture, reason, availableSlots, constraints } = input
+
+  if (!process.env.ANTHROPIC_API_KEY || availableSlots.length === 0) {
+    return suggestRescheduleManually(input)
+  }
+
+  const prompt = `Suggest the best slot to reschedule this cricket match.
+
+FIXTURE TO RESCHEDULE:
+${fixture.homeTeam} vs ${fixture.awayTeam}
+Original: ${fixture.originalDate} at ${fixture.originalVenue}
+Reason for reschedule: ${reason}
+
+AVAILABLE SLOTS:
+${availableSlots.map((s, i) => `${i + 1}. ${s.date} at ${s.venue} (${s.time})`).join('\n')}
+
+CONSTRAINTS:
+${constraints?.join('\n') || 'None specified'}
+
+Select the best slot considering:
+1. Fairness to both teams
+2. Weather/conditions if mentioned
+3. Venue preference (same venue if possible)
+4. Time slot preferences
+
+Respond with JSON (no markdown):
+{
+  "recommendedSlot": {
+    "slotId": "ID from available slots",
+    "date": "date",
+    "venue": "venue",
+    "time": "time",
+    "reason": "Why this is the best option"
+  },
+  "alternativeSlots": [...],
+  "notes": ["Any scheduling notes"]
+}`
 
   try {
     const response = await anthropic.messages.create({
       model: 'claude-3-haiku-20240307',
-      max_tokens: 2000,
+      max_tokens: 1000,
       messages: [{ role: 'user', content: prompt }],
     })
 
@@ -303,82 +382,53 @@ Return ONLY valid JSON.`
       throw new Error('Unexpected response type')
     }
 
-    // Try to extract JSON from the response
     let jsonText = content.text.trim()
-    // Handle case where response might have markdown code blocks
     const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/)
     if (jsonMatch) {
       jsonText = jsonMatch[1].trim()
     }
 
-    const result = JSON.parse(jsonText)
-    return result as FormatAnalysisResult
+    return JSON.parse(jsonText) as RescheduleResult
   } catch (error) {
-    console.error('Format analysis AI error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Reschedule AI error:', error)
+    return suggestRescheduleManually(input)
+  }
+}
+
+function suggestRescheduleManually(input: RescheduleInput): RescheduleResult {
+  const { availableSlots, fixture } = input
+
+  if (availableSlots.length === 0) {
     return {
-      formatType: 'CUSTOM',
-      totalRounds: null,
-      pairingRules: [],
-      tiebreakerRules: [],
-      specialRules: [],
-      suggestions: `AI analysis failed: ${errorMessage}. Please configure the format manually.`,
+      recommendedSlot: null,
+      alternativeSlots: [],
+      notes: ['No available slots for rescheduling']
     }
   }
-}
 
-export async function calculateBuchholzScores(
-  teams: TournamentTeam[],
-  fixtures: TournamentFixture[]
-): Promise<Map<string, number>> {
-  const scores = new Map<string, number>()
-  const teamPoints = new Map<string, number>()
-  
-  teams.forEach(t => teamPoints.set(t.id, t.points))
-  
-  teams.forEach(team => {
-    let buchholz = 0
-    
-    fixtures
-      .filter(f => 
-        f.status === 'COMPLETED' && 
-        (f.homeTeamId === team.id || f.awayTeamId === team.id)
-      )
-      .forEach(f => {
-        const opponentId = f.homeTeamId === team.id ? f.awayTeamId : f.homeTeamId
-        if (opponentId) {
-          buchholz += teamPoints.get(opponentId) || 0
-        }
-      })
-    
-    scores.set(team.id, buchholz)
-  })
-  
-  return scores
-}
+  const sameVenueSlots = availableSlots.filter(s => s.venue === fixture.originalVenue)
+  const sortedSlots = sameVenueSlots.length > 0 ? sameVenueSlots : availableSlots
 
-export function calculateNetRunRate(team: TournamentTeam): number {
-  if (team.oversBowled === 0 || team.oversPlayed === 0) {
-    return 0
+  const recommended = sortedSlots[0]
+  const alternatives = sortedSlots.slice(1, 3)
+
+  return {
+    recommendedSlot: {
+      slotId: recommended.slotId,
+      date: recommended.date,
+      venue: recommended.venue,
+      time: recommended.time,
+      reason: sameVenueSlots.length > 0 
+        ? 'Same venue as original fixture' 
+        : 'Earliest available slot'
+    },
+    alternativeSlots: alternatives.map(s => ({
+      slotId: s.slotId,
+      date: s.date,
+      venue: s.venue,
+      time: s.time,
+      reason: 'Alternative option'
+    })),
+    notes: ['Recommended based on venue preference and availability']
   }
-  
-  const runsPerOverScored = team.runsScored / team.oversPlayed
-  const runsPerOverConceded = team.runsConceded / team.oversBowled
-  
-  return runsPerOverScored - runsPerOverConceded
-}
-
-export function rankTeams(teams: TournamentTeam[]): TournamentTeam[] {
-  return [...teams].sort((a, b) => {
-    if (a.points !== b.points) return b.points - a.points
-    if (a.buchholzScore !== b.buchholzScore) return b.buchholzScore - a.buchholzScore
-    
-    const nrrA = calculateNetRunRate(a)
-    const nrrB = calculateNetRunRate(b)
-    if (nrrA !== nrrB) return nrrB - nrrA
-    
-    if (a.wins !== b.wins) return b.wins - a.wins
-    
-    return 0
-  })
 }

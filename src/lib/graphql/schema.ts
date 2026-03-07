@@ -880,6 +880,9 @@ export const typeDefs = gql`
     
     # AI Tournament Analysis
     analyzeTournamentFormat(documentText: String!): FormatAnalysisResult!
+
+    # Natural Language Query
+    askTeamAssistant(input: NLQueryInput!): NLQueryResult!
   }
 
   type FormatAnalysisResult {
@@ -889,6 +892,36 @@ export const typeDefs = gql`
     tiebreakerRules: [String!]!
     specialRules: [String!]!
     suggestions: String!
+  }
+
+  # ============================================
+  # NATURAL LANGUAGE QUERY TYPES
+  # ============================================
+
+  type NLQueryResult {
+    answer: String!
+    relevantPlayers: [String!]
+    suggestions: [String!]
+    confidence: QueryConfidence!
+    queryType: QueryType!
+  }
+
+  enum QueryConfidence {
+    HIGH
+    MEDIUM
+    LOW
+  }
+
+  enum QueryType {
+    PLAYER_SEARCH
+    STATS
+    RECOMMENDATION
+    COMPARISON
+    GENERAL
+  }
+
+  input NLQueryInput {
+    query: String!
   }
 
   # ============================================
