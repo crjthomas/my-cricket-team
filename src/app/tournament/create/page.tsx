@@ -18,7 +18,9 @@ import {
   Users,
   MapPin,
   Clock,
-  Zap
+  Zap,
+  Upload,
+  FileText
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -57,6 +59,7 @@ export default function CreateTournamentPage() {
   const [loading, setLoading] = useState(false)
   const [aiAnalyzing, setAiAnalyzing] = useState(false)
   const [aiSuggestions, setAiSuggestions] = useState<string | null>(null)
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null)
   
   const [formData, setFormData] = useState<TournamentFormData>({
     name: '',
@@ -91,6 +94,21 @@ export default function CreateTournamentPage() {
     { value: 'DOUBLE_ELIMINATION', label: 'Double Elimination', description: 'Teams must lose twice to be eliminated.' },
     { value: 'CUSTOM', label: 'Custom Format', description: 'Define your own tournament rules.' },
   ]
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setUploadedFileName(file.name)
+
+    try {
+      const text = await file.text()
+      setFormData(prev => ({ ...prev, customRulesText: text }))
+    } catch (error) {
+      console.error('Failed to read file:', error)
+      alert('Failed to read file. Please try a different file or paste the content manually.')
+    }
+  }
 
   const handleAnalyzeFormat = async () => {
     const textToAnalyze = formData.customRulesText || formData.formatDocument
@@ -462,26 +480,69 @@ export default function CreateTournamentPage() {
                       : 'Upload additional rules or modifications to the standard format'}
                   </p>
                   
-                  {/* Rules Text Input */}
+                  {/* File Upload */}
                   <div className="space-y-3">
-                    <div className="space-y-2">
-                      <label className={cn(
-                        "text-sm font-medium",
-                        formData.formatType === 'CUSTOM' ? "text-purple-700" : "text-cyan-700"
-                      )}>
-                        Paste the tournament format rules:
+                    <div className={cn(
+                      "border-2 border-dashed rounded-lg p-4 text-center transition-colors",
+                      formData.formatType === 'CUSTOM' 
+                        ? "border-purple-300 hover:border-purple-400 bg-purple-50/50" 
+                        : "border-cyan-300 hover:border-cyan-400 bg-cyan-50/50"
+                    )}>
+                      <input
+                        type="file"
+                        id="formatFile"
+                        accept=".txt,.doc,.docx,.pdf"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                      <label 
+                        htmlFor="formatFile" 
+                        className="cursor-pointer flex flex-col items-center gap-2"
+                      >
+                        <Upload className={cn(
+                          "h-8 w-8",
+                          formData.formatType === 'CUSTOM' ? "text-purple-500" : "text-cyan-500"
+                        )} />
+                        <span className="text-sm font-medium">
+                          {uploadedFileName ? (
+                            <span className="flex items-center gap-2">
+                              <FileText className="h-4 w-4" />
+                              {uploadedFileName}
+                            </span>
+                          ) : (
+                            'Click to upload format rules file'
+                          )}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Supports .txt files (paste content for other formats)
+                        </span>
                       </label>
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-white px-2 text-muted-foreground">Or paste directly</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
                       <textarea
                         value={formData.customRulesText || ''}
-                        onChange={(e) => setFormData({ ...formData, customRulesText: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, customRulesText: e.target.value })
+                          if (uploadedFileName) setUploadedFileName(null)
+                        }}
                         className={cn(
                           "w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 bg-white",
                           formData.formatType === 'CUSTOM' 
                             ? "focus:ring-purple-500" 
                             : "focus:ring-cyan-500"
                         )}
-                        placeholder="Paste or type the tournament format rules here...&#10;&#10;Example:&#10;- Swiss system with 5 rounds&#10;- Teams are paired based on points (higher plays higher)&#10;- Tiebreaker 1: Buchholz score (sum of opponents' points)&#10;- Tiebreaker 2: Net Run Rate&#10;- Top 4 teams qualify for knockouts&#10;- No team plays same opponent twice"
-                        rows={6}
+                        placeholder="Paste or type the tournament format rules here...&#10;&#10;Example:&#10;- Swiss system with 5 rounds&#10;- Teams are paired based on points (higher plays higher)&#10;- Tiebreaker 1: Buchholz score (sum of opponents' points)&#10;- Tiebreaker 2: Net Run Rate&#10;- Top 4 teams qualify for knockouts"
+                        rows={5}
                       />
                     </div>
                     
