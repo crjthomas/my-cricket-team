@@ -949,10 +949,17 @@ export const typeDefs = gql`
     totalRounds: Int
     teamsPerMatch: Int!
     matchesPerDay: Int!
+    slotsPerVenue: Int!
     matchDuration: Int!
     breakBetween: Int!
     matchFormat: MatchFormat!
     overs: Int!
+    weekendsOnly: Boolean!
+    saturdayVenues: Int!
+    saturdaySlots: Int!
+    sundayVenues: Int!
+    sundaySlots: Int!
+    sundayMorningOnly: Boolean!
     aiScheduleNotes: String
     lastAiAnalysis: DateTime
     teams: [TournamentTeam!]!
@@ -1059,14 +1066,18 @@ export const typeDefs = gql`
     venueId: String!
     venue: Venue!
     date: DateTime!
+    dayOfWeek: Int
     startTime: String!
     endTime: String!
     slotNumber: Int
+    slotType: String
     isAvailable: Boolean!
     isBlocked: Boolean!
     blockReason: String
+    blockedBy: String
     isPrimary: Boolean!
     maxCapacity: Int
+    notes: String
     fixtures: [TournamentFixture!]!
   }
 
@@ -1099,10 +1110,17 @@ export const typeDefs = gql`
     overs: Int!
     totalRounds: Int
     matchesPerDay: Int
+    slotsPerVenue: Int
     matchDuration: Int
     breakBetween: Int
     formatDocument: String
     formatRules: String
+    weekendsOnly: Boolean
+    saturdayVenues: Int
+    saturdaySlots: Int
+    sundayVenues: Int
+    sundaySlots: Int
+    sundayMorningOnly: Boolean
   }
 
   input UpdateTournamentInput {
@@ -1114,8 +1132,15 @@ export const typeDefs = gql`
     formatType: TournamentFormat
     totalRounds: Int
     matchesPerDay: Int
+    slotsPerVenue: Int
     matchDuration: Int
     breakBetween: Int
+    weekendsOnly: Boolean
+    saturdayVenues: Int
+    saturdaySlots: Int
+    sundayVenues: Int
+    sundaySlots: Int
+    sundayMorningOnly: Boolean
   }
 
   input AddTournamentTeamInput {

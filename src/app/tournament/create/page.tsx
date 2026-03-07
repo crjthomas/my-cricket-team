@@ -42,6 +42,12 @@ interface TournamentFormData {
   formatDocument: string
   customRulesText: string
   aiParsedRules: object | null
+  weekendsOnly: boolean
+  saturdayVenues: number
+  saturdaySlots: number
+  sundayVenues: number
+  sundaySlots: number
+  sundayMorningOnly: boolean
 }
 
 export default function CreateTournamentPage() {
@@ -68,7 +74,13 @@ export default function CreateTournamentPage() {
     breakBetween: 30,
     formatDocument: '',
     customRulesText: '',
-    aiParsedRules: null
+    aiParsedRules: null,
+    weekendsOnly: true,          // Matches on Sat/Sun only
+    saturdayVenues: 6,           // Full venues on Saturday
+    saturdaySlots: 2,            // Morning + Afternoon
+    sundayVenues: 2,             // Fewer venues on Sunday (others used by different tournaments)
+    sundaySlots: 1,              // Morning only on Sunday
+    sundayMorningOnly: true      // Sunday restricted to morning
   })
 
   const formatOptions: { value: TournamentFormat; label: string; description: string }[] = [
@@ -505,61 +517,187 @@ export default function CreateTournamentPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Venue Configuration */}
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h4 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                Venue Configuration
+            {/* Playing Days */}
+            <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <h4 className="font-medium text-amber-800 mb-3 flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Playing Days
               </h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Number of Venues</label>
-                  <input
-                    type="number"
-                    value={formData.numberOfVenues}
-                    onChange={(e) => {
-                      const venues = parseInt(e.target.value) || 6
-                      setFormData({ 
-                        ...formData, 
-                        numberOfVenues: venues,
-                        matchesPerDay: venues * formData.slotsPerVenue
-                      })
-                    }}
-                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                    min={1}
-                    max={20}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Slots per Venue</label>
-                  <select
-                    value={formData.slotsPerVenue}
-                    onChange={(e) => {
-                      const slots = parseInt(e.target.value) || 2
-                      setFormData({ 
-                        ...formData, 
-                        slotsPerVenue: slots,
-                        matchesPerDay: formData.numberOfVenues * slots
-                      })
-                    }}
-                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                  >
-                    <option value={1}>1 (Single session)</option>
-                    <option value={2}>2 (Morning + Afternoon)</option>
-                    <option value={3}>3 (Morning + Afternoon + Evening)</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Total Matches/Day</label>
-                  <div className="px-3 py-2 bg-white border rounded-md text-lg font-semibold text-cyan-700">
-                    {formData.matchesPerDay}
+              <div className="flex items-center gap-3 mb-4">
+                <input
+                  type="checkbox"
+                  id="weekendsOnly"
+                  checked={formData.weekendsOnly}
+                  onChange={(e) => setFormData({ ...formData, weekendsOnly: e.target.checked })}
+                  className="rounded"
+                />
+                <label htmlFor="weekendsOnly" className="text-sm font-medium">
+                  Weekend matches only (Saturdays & Sundays)
+                </label>
+              </div>
+              
+              {formData.weekendsOnly && (
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Saturday Configuration */}
+                  <div className="p-3 bg-white rounded-lg border border-amber-200">
+                    <h5 className="font-medium text-amber-700 mb-2">Saturday</h5>
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-gray-600">Venues Available</label>
+                        <input
+                          type="number"
+                          value={formData.saturdayVenues}
+                          onChange={(e) => setFormData({ ...formData, saturdayVenues: parseInt(e.target.value) || 6 })}
+                          className="w-full px-2 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                          min={1}
+                          max={20}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-gray-600">Time Slots</label>
+                        <select
+                          value={formData.saturdaySlots}
+                          onChange={(e) => setFormData({ ...formData, saturdaySlots: parseInt(e.target.value) || 2 })}
+                          className="w-full px-2 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        >
+                          <option value={1}>Morning only</option>
+                          <option value={2}>Morning + Afternoon</option>
+                          <option value={3}>Morning + Afternoon + Evening</option>
+                        </select>
+                      </div>
+                      <div className="text-xs text-amber-600 font-medium">
+                        {formData.saturdayVenues * formData.saturdaySlots} matches/Saturday
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {formData.numberOfVenues} venues × {formData.slotsPerVenue} slots
+
+                  {/* Sunday Configuration */}
+                  <div className="p-3 bg-white rounded-lg border border-orange-200">
+                    <h5 className="font-medium text-orange-700 mb-2 flex items-center justify-between">
+                      Sunday
+                      <Badge variant="outline" className="text-xs bg-orange-50">Shared venues</Badge>
+                    </h5>
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-gray-600">Venues Available</label>
+                        <input
+                          type="number"
+                          value={formData.sundayVenues}
+                          onChange={(e) => setFormData({ ...formData, sundayVenues: parseInt(e.target.value) || 2 })}
+                          className="w-full px-2 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                          min={1}
+                          max={20}
+                        />
+                        <p className="text-xs text-gray-500">Other venues may be used by different tournaments</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="sundayMorningOnly"
+                          checked={formData.sundayMorningOnly}
+                          onChange={(e) => setFormData({ 
+                            ...formData, 
+                            sundayMorningOnly: e.target.checked,
+                            sundaySlots: e.target.checked ? 1 : formData.sundaySlots
+                          })}
+                          className="rounded"
+                        />
+                        <label htmlFor="sundayMorningOnly" className="text-xs font-medium">
+                          Morning games only
+                        </label>
+                      </div>
+                      {!formData.sundayMorningOnly && (
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-gray-600">Time Slots</label>
+                          <select
+                            value={formData.sundaySlots}
+                            onChange={(e) => setFormData({ ...formData, sundaySlots: parseInt(e.target.value) || 1 })}
+                            className="w-full px-2 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                          >
+                            <option value={1}>Morning only</option>
+                            <option value={2}>Morning + Afternoon</option>
+                            <option value={3}>Morning + Afternoon + Evening</option>
+                          </select>
+                        </div>
+                      )}
+                      <div className="text-xs text-orange-600 font-medium">
+                        {formData.sundayVenues * (formData.sundayMorningOnly ? 1 : formData.sundaySlots)} matches/Sunday
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {formData.weekendsOnly && (
+                <div className="mt-3 p-2 bg-cyan-50 rounded border border-cyan-200">
+                  <p className="text-sm text-cyan-800">
+                    <span className="font-medium">Weekly capacity:</span>{' '}
+                    {formData.saturdayVenues * formData.saturdaySlots + formData.sundayVenues * (formData.sundayMorningOnly ? 1 : formData.sundaySlots)} matches/weekend
+                    <span className="text-cyan-600 ml-2">
+                      (Sat: {formData.saturdayVenues * formData.saturdaySlots}, Sun: {formData.sundayVenues * (formData.sundayMorningOnly ? 1 : formData.sundaySlots)})
+                    </span>
                   </p>
                 </div>
-              </div>
+              )}
             </div>
+
+            {/* General Venue Configuration (for non-weekend or as defaults) */}
+            {!formData.weekendsOnly && (
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Venue Configuration
+                </h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Number of Venues</label>
+                    <input
+                      type="number"
+                      value={formData.numberOfVenues}
+                      onChange={(e) => {
+                        const venues = parseInt(e.target.value) || 6
+                        setFormData({ 
+                          ...formData, 
+                          numberOfVenues: venues,
+                          matchesPerDay: venues * formData.slotsPerVenue
+                        })
+                      }}
+                      className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      min={1}
+                      max={20}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Slots per Venue</label>
+                    <select
+                      value={formData.slotsPerVenue}
+                      onChange={(e) => {
+                        const slots = parseInt(e.target.value) || 2
+                        setFormData({ 
+                          ...formData, 
+                          slotsPerVenue: slots,
+                          matchesPerDay: formData.numberOfVenues * slots
+                        })
+                      }}
+                      className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    >
+                      <option value={1}>1 (Single session)</option>
+                      <option value={2}>2 (Morning + Afternoon)</option>
+                      <option value={3}>3 (Morning + Afternoon + Evening)</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Total Matches/Day</label>
+                    <div className="px-3 py-2 bg-white border rounded-md text-lg font-semibold text-cyan-700">
+                      {formData.matchesPerDay}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {formData.numberOfVenues} venues × {formData.slotsPerVenue} slots
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Time Configuration */}
             <div className="grid grid-cols-2 gap-4">
@@ -601,12 +739,24 @@ export default function CreateTournamentPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-400" />
-                  <span>{formData.startDate}</span>
+                  <span>{formData.startDate}{formData.weekendsOnly ? ' (Weekends only)' : ''}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-gray-400" />
                   <span>{formData.matchFormat} ({formData.overs} overs)</span>
                 </div>
+                {formData.weekendsOnly && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-gray-400" />
+                      <span>Sat: {formData.saturdayVenues} venues, {formData.saturdaySlots} slots</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-gray-400" />
+                      <span>Sun: {formData.sundayVenues} venues, {formData.sundayMorningOnly ? 'morning only' : `${formData.sundaySlots} slots`}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

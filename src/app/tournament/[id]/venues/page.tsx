@@ -49,6 +49,12 @@ interface Tournament {
   name: string
   startDate: string
   endDate: string | null
+  weekendsOnly: boolean
+  saturdayVenues: number
+  saturdaySlots: number
+  sundayVenues: number
+  sundaySlots: number
+  sundayMorningOnly: boolean
 }
 
 export default function TournamentVenuesPage({ params }: { params: Promise<{ id: string }> }) {
@@ -88,7 +94,11 @@ export default function TournamentVenuesPage({ params }: { params: Promise<{ id:
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             query: `query GetTournament($id: ID!) {
-              tournament(id: $id) { id name startDate endDate }
+              tournament(id: $id) { 
+                id name startDate endDate 
+                weekendsOnly saturdayVenues saturdaySlots 
+                sundayVenues sundaySlots sundayMorningOnly 
+              }
             }`,
             variables: { id: resolvedParams.id }
           })
@@ -226,14 +236,27 @@ export default function TournamentVenuesPage({ params }: { params: Promise<{ id:
     if (!tournament) return []
     const dates: string[] = []
     const start = new Date(tournament.startDate)
-    const end = tournament.endDate ? new Date(tournament.endDate) : new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const end = tournament.endDate ? new Date(tournament.endDate) : new Date(start.getTime() + 60 * 24 * 60 * 60 * 1000)
     
     const current = new Date(start)
     while (current <= end) {
-      dates.push(current.toISOString().split('T')[0])
+      const dayOfWeek = current.getDay()
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6 // Sunday=0, Saturday=6
+      
+      if (!tournament.weekendsOnly || isWeekend) {
+        dates.push(current.toISOString().split('T')[0])
+      }
       current.setDate(current.getDate() + 1)
     }
     return dates
+  }
+
+  const getDayInfo = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const dayOfWeek = date.getDay()
+    const isSaturday = dayOfWeek === 6
+    const isSunday = dayOfWeek === 0
+    return { isSaturday, isSunday, dayOfWeek }
   }
 
   const getSlotsForDateAndVenue = (date: string, venueId: string) => {
@@ -292,34 +315,74 @@ export default function TournamentVenuesPage({ params }: { params: Promise<{ id:
         )}
       </div>
 
+      {/* Weekend Configuration Info */}
+      {tournament.weekendsOnly && (
+        <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-4">
+                <span className="font-medium text-amber-800">Weekend Schedule:</span>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-amber-100 text-amber-700">
+                    Saturday: {tournament.saturdayVenues} venues, {tournament.saturdaySlots === 1 ? 'morning only' : `${tournament.saturdaySlots} slots`}
+                  </Badge>
+                  <Badge className="bg-orange-100 text-orange-700">
+                    Sunday: {tournament.sundayVenues} venues, {tournament.sundayMorningOnly ? 'morning only' : `${tournament.sundaySlots} slots`}
+                  </Badge>
+                </div>
+              </div>
+              <span className="text-muted-foreground">
+                {tournament.saturdayVenues * tournament.saturdaySlots + tournament.sundayVenues * (tournament.sundayMorningOnly ? 1 : tournament.sundaySlots)} matches/weekend
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Date Selector */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             Select Date
+            {tournament.weekendsOnly && (
+              <Badge variant="outline" className="ml-2 text-xs">Weekends only</Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2 overflow-x-auto pb-2">
-            {dateRange.slice(0, 14).map((date) => {
+            {dateRange.slice(0, 20).map((date) => {
               const dateObj = new Date(date)
+              const { isSaturday, isSunday } = getDayInfo(date)
               const isSelected = date === selectedDate
               const slotsOnDate = groundSlots.filter(s => s.date.split('T')[0] === date)
               const availableSlots = slotsOnDate.filter(s => s.isAvailable && !s.isBlocked).length
+              
+              const expectedSlots = isSaturday 
+                ? tournament.saturdayVenues * tournament.saturdaySlots
+                : isSunday 
+                  ? tournament.sundayVenues * (tournament.sundayMorningOnly ? 1 : tournament.sundaySlots)
+                  : 0
               
               return (
                 <button
                   key={date}
                   onClick={() => setSelectedDate(date)}
                   className={cn(
-                    "flex flex-col items-center px-4 py-2 rounded-lg min-w-[80px] transition-colors",
+                    "flex flex-col items-center px-4 py-2 rounded-lg min-w-[85px] transition-colors relative",
                     isSelected 
-                      ? "bg-cyan-500 text-white" 
-                      : "bg-gray-100 hover:bg-gray-200"
+                      ? isSaturday ? "bg-amber-500 text-white" : isSunday ? "bg-orange-500 text-white" : "bg-cyan-500 text-white"
+                      : isSaturday ? "bg-amber-50 hover:bg-amber-100 border border-amber-200" 
+                        : isSunday ? "bg-orange-50 hover:bg-orange-100 border border-orange-200"
+                        : "bg-gray-100 hover:bg-gray-200"
                   )}
                 >
-                  <span className="text-xs font-medium">
+                  <span className={cn(
+                    "text-xs font-medium",
+                    !isSelected && isSaturday && "text-amber-700",
+                    !isSelected && isSunday && "text-orange-700"
+                  )}>
                     {dateObj.toLocaleDateString('en-US', { weekday: 'short' })}
                   </span>
                   <span className="text-lg font-bold">
@@ -328,6 +391,14 @@ export default function TournamentVenuesPage({ params }: { params: Promise<{ id:
                   <span className="text-xs">
                     {dateObj.toLocaleDateString('en-US', { month: 'short' })}
                   </span>
+                  {tournament.weekendsOnly && (
+                    <span className={cn(
+                      "text-[10px] mt-0.5",
+                      isSelected ? "text-white/80" : "text-muted-foreground"
+                    )}>
+                      {expectedSlots} slots
+                    </span>
+                  )}
                   {slotsOnDate.length > 0 && (
                     <Badge 
                       variant="outline" 

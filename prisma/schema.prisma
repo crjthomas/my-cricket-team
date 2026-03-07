@@ -796,6 +796,14 @@ model Tournament {
   matchFormat     MatchFormat @default(T20)
   overs           Int      @default(20)
   
+  // Weekend Scheduling
+  weekendsOnly     Boolean @default(true)   // Only Sat/Sun matches
+  saturdayVenues   Int     @default(6)      // Venues available on Saturday
+  saturdaySlots    Int     @default(2)      // Slots per venue on Saturday
+  sundayVenues     Int     @default(2)      // Fewer venues on Sunday (shared with other tournaments)
+  sundaySlots      Int     @default(1)      // Slots per venue on Sunday
+  sundayMorningOnly Boolean @default(true)  // Sunday restricted to morning games
+  
   // AI Scheduling
   aiScheduleNotes  String?   // AI assistant notes/recommendations
   lastAiAnalysis   DateTime?
@@ -994,17 +1002,23 @@ model GroundSlot {
   venue        Venue    @relation(fields: [venueId], references: [id])
   
   date         DateTime
+  dayOfWeek    Int?     // 0=Sunday, 6=Saturday (for weekend filtering)
   startTime    String   // "09:00"
   endTime      String   // "12:00"
-  slotNumber   Int?     // 1, 2, 3, 4 for multiple slots per day
+  slotNumber   Int?     // 1=Morning, 2=Afternoon, 3=Evening
+  slotType     String?  // "morning", "afternoon", "evening"
   
   isAvailable  Boolean @default(true)
   isBlocked    Boolean @default(false)
   blockReason  String?
+  blockedBy    String?  // "Other tournament", "Maintenance", etc.
   
   // Capacity/priority
   isPrimary    Boolean @default(true)  // Primary venue vs backup
   maxCapacity  Int?
+  
+  // Notes for scheduler
+  notes        String?
   
   fixtures     TournamentFixture[]
   
