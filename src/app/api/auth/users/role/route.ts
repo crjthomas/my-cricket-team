@@ -39,6 +39,8 @@ export async function PATCH(request: NextRequest) {
     let newRole: UserRole
     if (role === 'ADMIN') {
       newRole = UserRole.ADMIN
+    } else if (role === 'TOURNAMENT_MANAGER') {
+      newRole = UserRole.TOURNAMENT_MANAGER
     } else if (role === 'MEDIA_MANAGER') {
       newRole = UserRole.MEDIA_MANAGER
     } else {
@@ -50,7 +52,7 @@ export async function PATCH(request: NextRequest) {
       data: { role: newRole },
     })
 
-    const roleDisplayName = newRole === UserRole.ADMIN ? 'Admin' : newRole === UserRole.MEDIA_MANAGER ? 'Media Manager' : 'Viewer'
+    const roleDisplayName = newRole === UserRole.ADMIN ? 'Admin' : newRole === UserRole.TOURNAMENT_MANAGER ? 'Tournament Manager' : newRole === UserRole.MEDIA_MANAGER ? 'Media Manager' : 'Viewer'
 
     // Log role change activity
     await prisma.activity.create({

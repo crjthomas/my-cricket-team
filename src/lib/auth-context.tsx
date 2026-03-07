@@ -13,6 +13,7 @@ interface AuthContextType {
   user: AuthUser | null
   isLoading: boolean
   isAdmin: boolean
+  isTournamentManager: boolean
   isMediaManager: boolean
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
@@ -75,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const isAdmin = user?.role === 'ADMIN'
+  const isTournamentManager = user?.role === 'TOURNAMENT_MANAGER'
   const isMediaManager = user?.role === 'MEDIA_MANAGER'
 
   return (
@@ -83,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAdmin,
+        isTournamentManager,
         isMediaManager,
         login,
         logout,
@@ -104,7 +107,7 @@ export function useAuth() {
 
 // Permission hooks
 export function usePermissions() {
-  const { user, isAdmin, isMediaManager } = useAuth()
+  const { user, isAdmin, isTournamentManager, isMediaManager } = useAuth()
 
   return {
     // Admin-only features
@@ -118,6 +121,13 @@ export function usePermissions() {
     canManageOpponents: isAdmin,
     canManageSeasons: isAdmin,
 
+    // Tournament Manager features (Admin can also do these)
+    canManageTournaments: isAdmin || isTournamentManager,
+    canScheduleTournaments: isAdmin || isTournamentManager,
+    canManageTeamRegistration: isAdmin || isTournamentManager,
+    canManageGroundSlots: isAdmin || isTournamentManager,
+    canUseTournamentAI: isAdmin || isTournamentManager,
+
     // Media Manager features (Admin can also do these)
     canManageMedia: isAdmin || isMediaManager,
     canManageStats: isAdmin || isMediaManager,
@@ -130,5 +140,6 @@ export function usePermissions() {
     canViewStats: !!user,
     canViewGallery: !!user,
     canViewTeamUpdates: !!user,
+    canViewTournaments: !!user,
   }
 }

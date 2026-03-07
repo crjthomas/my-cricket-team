@@ -703,6 +703,15 @@ export const typeDefs = gql`
     # Ratings (Admin only)
     ratingPreview(seasonId: String, excludePlayerIds: [String!]): [PlayerRatingPreview!]!
     playerRatingHistory(playerId: String!, limit: Int): [RatingHistory!]!
+    
+    # Tournaments
+    tournaments(status: TournamentStatus): [Tournament!]!
+    tournament(id: ID!): Tournament
+    tournamentTeams(tournamentId: ID!): [TournamentTeam!]!
+    tournamentFixtures(tournamentId: ID!, roundId: ID): [TournamentFixture!]!
+    tournamentRounds(tournamentId: ID!): [TournamentRound!]!
+    groundSlots(tournamentId: ID!, date: DateTime): [GroundSlot!]!
+    tournamentStandings(tournamentId: ID!): [TournamentStanding!]!
   }
 
   # ============================================
@@ -852,6 +861,340 @@ export const typeDefs = gql`
       playerId: String!
       form: PlayerForm!
     ): SeasonStats
+    
+    # Tournament Management
+    createTournament(input: CreateTournamentInput!): Tournament!
+    updateTournament(id: ID!, input: UpdateTournamentInput!): Tournament!
+    deleteTournament(id: ID!): Boolean!
+    
+    addTournamentTeam(input: AddTournamentTeamInput!): TournamentTeam!
+    updateTournamentTeam(id: ID!, input: UpdateTournamentTeamInput!): TournamentTeam!
+    deleteTournamentTeam(id: ID!): Boolean!
+    
+    createTournamentRound(input: CreateTournamentRoundInput!): TournamentRound!
+    createTournamentFixture(input: CreateTournamentFixtureInput!): TournamentFixture!
+    updateFixtureResult(id: ID!, input: UpdateFixtureResultInput!): TournamentFixture!
+    
+    createGroundSlot(input: CreateGroundSlotInput!): GroundSlot!
+    updateGroundSlot(id: ID!, input: UpdateGroundSlotInput!): GroundSlot!
+  }
+
+  # ============================================
+  # TOURNAMENT ENUMS
+  # ============================================
+
+  enum TournamentStatus {
+    DRAFT
+    REGISTRATION_OPEN
+    REGISTRATION_CLOSED
+    SCHEDULING
+    IN_PROGRESS
+    COMPLETED
+    CANCELLED
+  }
+
+  enum TournamentFormat {
+    SWISS
+    KNOCKOUT
+    ROUND_ROBIN
+    GROUP_STAGE_KNOCKOUT
+    DOUBLE_ELIMINATION
+    CUSTOM
+  }
+
+  enum RoundStatus {
+    PENDING
+    SCHEDULING
+    SCHEDULED
+    IN_PROGRESS
+    COMPLETED
+  }
+
+  enum RoundType {
+    LEAGUE
+    GROUP_STAGE
+    QUARTER_FINAL
+    SEMI_FINAL
+    FINAL
+    THIRD_PLACE
+    PRELIMINARY
+  }
+
+  enum FixtureStatus {
+    TBD
+    SCHEDULED
+    IN_PROGRESS
+    COMPLETED
+    POSTPONED
+    CANCELLED
+    WALKOVER
+  }
+
+  # ============================================
+  # TOURNAMENT TYPES
+  # ============================================
+
+  type Tournament {
+    id: ID!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    name: String!
+    description: String
+    startDate: DateTime!
+    endDate: DateTime
+    status: TournamentStatus!
+    formatType: TournamentFormat!
+    formatDocument: String
+    formatRules: String
+    totalRounds: Int
+    teamsPerMatch: Int!
+    matchesPerDay: Int!
+    matchDuration: Int!
+    breakBetween: Int!
+    matchFormat: MatchFormat!
+    overs: Int!
+    aiScheduleNotes: String
+    lastAiAnalysis: DateTime
+    teams: [TournamentTeam!]!
+    rounds: [TournamentRound!]!
+    fixtures: [TournamentFixture!]!
+    groundSlots: [GroundSlot!]!
+    _count: TournamentCount!
+  }
+
+  type TournamentCount {
+    teams: Int!
+    fixtures: Int!
+    rounds: Int!
+  }
+
+  type TournamentTeam {
+    id: ID!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    tournamentId: String!
+    tournament: Tournament!
+    teamName: String!
+    shortName: String
+    contactName: String
+    contactEmail: String
+    contactPhone: String
+    logo: String
+    seedRank: Int
+    groupName: String
+    points: Float!
+    buchholzScore: Float!
+    wins: Int!
+    losses: Int!
+    draws: Int!
+    runsScored: Int!
+    runsConceded: Int!
+    oversPlayed: Float!
+    oversBowled: Float!
+    isConfirmed: Boolean!
+    isWithdrawn: Boolean!
+    withdrawReason: String
+    homeFixtures: [TournamentFixture!]!
+    awayFixtures: [TournamentFixture!]!
+  }
+
+  type TournamentRound {
+    id: ID!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    tournamentId: String!
+    tournament: Tournament!
+    roundNumber: Int!
+    roundName: String
+    roundType: RoundType!
+    status: RoundStatus!
+    startDate: DateTime
+    endDate: DateTime
+    pairingNotes: String
+    fixtures: [TournamentFixture!]!
+  }
+
+  type TournamentFixture {
+    id: ID!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    fixtureNumber: Int
+    tournamentId: String!
+    tournament: Tournament!
+    roundId: String
+    round: TournamentRound
+    homeTeamId: String
+    homeTeam: TournamentTeam
+    awayTeamId: String
+    awayTeam: TournamentTeam
+    homePlaceholder: String
+    awayPlaceholder: String
+    scheduledDate: DateTime
+    scheduledTime: String
+    groundSlotId: String
+    groundSlot: GroundSlot
+    status: FixtureStatus!
+    homeScore: String
+    awayScore: String
+    winnerId: String
+    winner: TournamentTeam
+    resultSummary: String
+    isTie: Boolean!
+    isNoResult: Boolean!
+    homePoints: Float!
+    awayPoints: Float!
+    originalDate: DateTime
+    rescheduleReason: String
+    rescheduleCount: Int!
+    umpires: String
+    notes: String
+  }
+
+  type GroundSlot {
+    id: ID!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    tournamentId: String!
+    tournament: Tournament!
+    venueId: String!
+    venue: Venue!
+    date: DateTime!
+    startTime: String!
+    endTime: String!
+    slotNumber: Int
+    isAvailable: Boolean!
+    isBlocked: Boolean!
+    blockReason: String
+    isPrimary: Boolean!
+    maxCapacity: Int
+    fixtures: [TournamentFixture!]!
+  }
+
+  type TournamentStanding {
+    id: ID!
+    teamName: String!
+    shortName: String
+    position: Int!
+    points: Float!
+    played: Int!
+    wins: Int!
+    losses: Int!
+    draws: Int!
+    buchholzScore: Float!
+    netRunRate: Float!
+    isWithdrawn: Boolean!
+  }
+
+  # ============================================
+  # TOURNAMENT INPUTS
+  # ============================================
+
+  input CreateTournamentInput {
+    name: String!
+    description: String
+    startDate: DateTime!
+    endDate: DateTime
+    formatType: TournamentFormat!
+    matchFormat: MatchFormat!
+    overs: Int!
+    totalRounds: Int
+    matchesPerDay: Int
+    matchDuration: Int
+    breakBetween: Int
+    formatDocument: String
+    formatRules: String
+  }
+
+  input UpdateTournamentInput {
+    name: String
+    description: String
+    startDate: DateTime
+    endDate: DateTime
+    status: TournamentStatus
+    formatType: TournamentFormat
+    totalRounds: Int
+    matchesPerDay: Int
+    matchDuration: Int
+    breakBetween: Int
+  }
+
+  input AddTournamentTeamInput {
+    tournamentId: ID!
+    teamName: String!
+    shortName: String
+    contactName: String
+    contactEmail: String
+    contactPhone: String
+    seedRank: Int
+    groupName: String
+  }
+
+  input UpdateTournamentTeamInput {
+    teamName: String
+    shortName: String
+    contactName: String
+    contactEmail: String
+    seedRank: Int
+    groupName: String
+    isConfirmed: Boolean
+    isWithdrawn: Boolean
+    withdrawReason: String
+    points: Float
+    buchholzScore: Float
+    wins: Int
+    losses: Int
+    draws: Int
+  }
+
+  input CreateTournamentRoundInput {
+    tournamentId: ID!
+    roundNumber: Int!
+    roundName: String
+    roundType: RoundType
+    startDate: DateTime
+    endDate: DateTime
+  }
+
+  input CreateTournamentFixtureInput {
+    tournamentId: ID!
+    roundId: ID
+    fixtureNumber: Int
+    homeTeamId: ID
+    awayTeamId: ID
+    homePlaceholder: String
+    awayPlaceholder: String
+    scheduledDate: DateTime
+    scheduledTime: String
+    groundSlotId: ID
+  }
+
+  input UpdateFixtureResultInput {
+    status: FixtureStatus
+    homeScore: String
+    awayScore: String
+    winnerId: ID
+    resultSummary: String
+    homePoints: Float
+    awayPoints: Float
+    isTie: Boolean
+    isNoResult: Boolean
+  }
+
+  input CreateGroundSlotInput {
+    tournamentId: ID!
+    venueId: ID!
+    date: DateTime!
+    startTime: String!
+    endTime: String!
+    slotNumber: Int
+    isPrimary: Boolean
+    maxCapacity: Int
+  }
+
+  input UpdateGroundSlotInput {
+    isAvailable: Boolean
+    isBlocked: Boolean
+    blockReason: String
   }
 `
 

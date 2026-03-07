@@ -624,6 +624,95 @@ export const resolvers = {
         take: limit || 20,
       })
     },
+
+    // ============================================
+    // TOURNAMENT QUERIES
+    // ============================================
+    tournaments: async (_: unknown, { status }: { status?: string } = {}) => {
+      const where = status ? { status: status as 'DRAFT' | 'REGISTRATION_OPEN' | 'REGISTRATION_CLOSED' | 'SCHEDULING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' } : undefined
+      return prisma.tournament.findMany({
+        where,
+        orderBy: { startDate: 'desc' },
+      })
+    },
+
+    tournament: async (_: unknown, { id }: { id: string }) => {
+      return prisma.tournament.findUnique({
+        where: { id },
+        include: {
+          teams: { orderBy: [{ points: 'desc' }, { buchholzScore: 'desc' }] },
+          rounds: { orderBy: { roundNumber: 'asc' } },
+        },
+      })
+    },
+
+    tournamentTeams: async (_: unknown, { tournamentId }: { tournamentId: string }) => {
+      return prisma.tournamentTeam.findMany({
+        where: { tournamentId },
+        orderBy: [{ points: 'desc' }, { buchholzScore: 'desc' }],
+      })
+    },
+
+    tournamentFixtures: async (_: unknown, { tournamentId, roundId }: { tournamentId: string; roundId?: string }) => {
+      const where: { tournamentId: string; roundId?: string } = { tournamentId }
+      if (roundId) where.roundId = roundId
+      
+      return prisma.tournamentFixture.findMany({
+        where,
+        orderBy: [{ scheduledDate: 'asc' }, { scheduledTime: 'asc' }],
+        include: {
+          homeTeam: true,
+          awayTeam: true,
+          winner: true,
+          round: true,
+          groundSlot: { include: { venue: true } },
+        },
+      })
+    },
+
+    tournamentRounds: async (_: unknown, { tournamentId }: { tournamentId: string }) => {
+      return prisma.tournamentRound.findMany({
+        where: { tournamentId },
+        orderBy: { roundNumber: 'asc' },
+        include: {
+          fixtures: {
+            include: { homeTeam: true, awayTeam: true },
+            orderBy: { fixtureNumber: 'asc' },
+          },
+        },
+      })
+    },
+
+    groundSlots: async (_: unknown, { tournamentId, date }: { tournamentId: string; date?: string }) => {
+      const where: { tournamentId: string; date?: Date } = { tournamentId }
+      if (date) where.date = new Date(date)
+      
+      return prisma.groundSlot.findMany({
+        where,
+        orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
+        include: { venue: true },
+      })
+    },
+
+    tournamentStandings: async (_: unknown, { tournamentId }: { tournamentId: string }) => {
+      const teams = await prisma.tournamentTeam.findMany({
+        where: { tournamentId, isWithdrawn: false },
+        orderBy: [
+          { points: 'desc' },
+          { buchholzScore: 'desc' },
+          { wins: 'desc' },
+        ],
+      })
+      
+      return teams.map((team, index) => ({
+        ...team,
+        position: index + 1,
+        played: team.wins + team.losses + team.draws,
+        netRunRate: team.oversBowled > 0 
+          ? (team.runsScored / team.oversPlayed) - (team.runsConceded / team.oversBowled)
+          : 0,
+      }))
+    },
   },
 
   // ============================================
@@ -1477,6 +1566,481 @@ export const resolvers = {
       }
 
       return seasonStats
+    },
+
+    // ============================================
+    // TOURNAMENT MUTATIONS
+    // ============================================
+    createTournament: async (
+      _: unknown,
+      { input }: { 
+        input: {
+          name: string
+          description?: string
+          startDate: string
+          endDate?: string
+          formatType: string
+          matchFormat: string
+          overs: number
+          totalRounds?: number
+          matchesPerDay?: number
+          matchDuration?: number
+          breakBetween?: number
+          formatDocument?: string
+          formatRules?: object
+        }
+      }
+    ) => {
+      const tournament = await prisma.tournament.create({
+        data: {
+          name: sanitizeString(input.name, 200) || '',
+          description: sanitizeString(input.description, 2000),
+          startDate: new Date(input.startDate),
+          endDate: input.endDate ? new Date(input.endDate) : null,
+          formatType: input.formatType as 'SWISS' | 'KNOCKOUT' | 'ROUND_ROBIN' | 'GROUP_STAGE_KNOCKOUT' | 'DOUBLE_ELIMINATION' | 'CUSTOM',
+          matchFormat: input.matchFormat as 'T20' | 'T30' | 'T10' | 'ODI' | 'OTHER',
+          overs: input.overs,
+          totalRounds: input.totalRounds,
+          matchesPerDay: input.matchesPerDay || 4,
+          matchDuration: input.matchDuration || 180,
+          breakBetween: input.breakBetween || 30,
+          formatDocument: input.formatDocument,
+          formatRules: input.formatRules || undefined,
+          status: 'DRAFT',
+        },
+      })
+
+      await prisma.activity.create({
+        data: {
+          type: 'MATCH_CREATED',
+          title: `Tournament created: ${tournament.name}`,
+          entityType: 'tournament',
+          entityId: tournament.id,
+        },
+      })
+
+      return tournament
+    },
+
+    updateTournament: async (
+      _: unknown,
+      { id, input }: { 
+        id: string
+        input: {
+          name?: string
+          description?: string
+          startDate?: string
+          endDate?: string
+          status?: string
+          formatType?: string
+          totalRounds?: number
+          matchesPerDay?: number
+          matchDuration?: number
+          breakBetween?: number
+        }
+      }
+    ) => {
+      const updateData: Record<string, unknown> = {}
+      
+      if (input.name !== undefined) updateData.name = sanitizeString(input.name, 200)
+      if (input.description !== undefined) updateData.description = sanitizeString(input.description, 2000)
+      if (input.startDate !== undefined) updateData.startDate = new Date(input.startDate)
+      if (input.endDate !== undefined) updateData.endDate = input.endDate ? new Date(input.endDate) : null
+      if (input.status !== undefined) updateData.status = input.status
+      if (input.formatType !== undefined) updateData.formatType = input.formatType
+      if (input.totalRounds !== undefined) updateData.totalRounds = input.totalRounds
+      if (input.matchesPerDay !== undefined) updateData.matchesPerDay = input.matchesPerDay
+      if (input.matchDuration !== undefined) updateData.matchDuration = input.matchDuration
+      if (input.breakBetween !== undefined) updateData.breakBetween = input.breakBetween
+
+      return prisma.tournament.update({
+        where: { id },
+        data: updateData,
+      })
+    },
+
+    deleteTournament: async (_: unknown, { id }: { id: string }) => {
+      await prisma.tournament.delete({ where: { id } })
+      return true
+    },
+
+    addTournamentTeam: async (
+      _: unknown,
+      { input }: {
+        input: {
+          tournamentId: string
+          teamName: string
+          shortName?: string
+          contactName?: string
+          contactEmail?: string
+          contactPhone?: string
+          seedRank?: number
+          groupName?: string
+        }
+      }
+    ) => {
+      return prisma.tournamentTeam.create({
+        data: {
+          tournamentId: input.tournamentId,
+          teamName: sanitizeString(input.teamName, 200) || '',
+          shortName: sanitizeString(input.shortName, 50),
+          contactName: sanitizeString(input.contactName, 200),
+          contactEmail: sanitizeString(input.contactEmail, 200),
+          contactPhone: sanitizeString(input.contactPhone, 50),
+          seedRank: input.seedRank,
+          groupName: input.groupName,
+          isConfirmed: false,
+        },
+      })
+    },
+
+    updateTournamentTeam: async (
+      _: unknown,
+      { id, input }: {
+        id: string
+        input: {
+          teamName?: string
+          shortName?: string
+          contactName?: string
+          contactEmail?: string
+          seedRank?: number
+          groupName?: string
+          isConfirmed?: boolean
+          isWithdrawn?: boolean
+          withdrawReason?: string
+          points?: number
+          buchholzScore?: number
+          wins?: number
+          losses?: number
+          draws?: number
+        }
+      }
+    ) => {
+      const updateData: Record<string, unknown> = {}
+      
+      if (input.teamName !== undefined) updateData.teamName = sanitizeString(input.teamName, 200)
+      if (input.shortName !== undefined) updateData.shortName = sanitizeString(input.shortName, 50)
+      if (input.contactName !== undefined) updateData.contactName = sanitizeString(input.contactName, 200)
+      if (input.contactEmail !== undefined) updateData.contactEmail = sanitizeString(input.contactEmail, 200)
+      if (input.seedRank !== undefined) updateData.seedRank = input.seedRank
+      if (input.groupName !== undefined) updateData.groupName = input.groupName
+      if (input.isConfirmed !== undefined) updateData.isConfirmed = input.isConfirmed
+      if (input.isWithdrawn !== undefined) updateData.isWithdrawn = input.isWithdrawn
+      if (input.withdrawReason !== undefined) updateData.withdrawReason = sanitizeString(input.withdrawReason, 500)
+      if (input.points !== undefined) updateData.points = input.points
+      if (input.buchholzScore !== undefined) updateData.buchholzScore = input.buchholzScore
+      if (input.wins !== undefined) updateData.wins = input.wins
+      if (input.losses !== undefined) updateData.losses = input.losses
+      if (input.draws !== undefined) updateData.draws = input.draws
+
+      return prisma.tournamentTeam.update({
+        where: { id },
+        data: updateData,
+      })
+    },
+
+    deleteTournamentTeam: async (_: unknown, { id }: { id: string }) => {
+      await prisma.tournamentTeam.delete({ where: { id } })
+      return true
+    },
+
+    createTournamentRound: async (
+      _: unknown,
+      { input }: {
+        input: {
+          tournamentId: string
+          roundNumber: number
+          roundName?: string
+          roundType?: string
+          startDate?: string
+          endDate?: string
+        }
+      }
+    ) => {
+      return prisma.tournamentRound.create({
+        data: {
+          tournamentId: input.tournamentId,
+          roundNumber: input.roundNumber,
+          roundName: sanitizeString(input.roundName, 100),
+          roundType: (input.roundType || 'LEAGUE') as 'LEAGUE' | 'GROUP_STAGE' | 'QUARTER_FINAL' | 'SEMI_FINAL' | 'FINAL' | 'THIRD_PLACE' | 'PRELIMINARY',
+          startDate: input.startDate ? new Date(input.startDate) : null,
+          endDate: input.endDate ? new Date(input.endDate) : null,
+          status: 'PENDING',
+        },
+      })
+    },
+
+    createTournamentFixture: async (
+      _: unknown,
+      { input }: {
+        input: {
+          tournamentId: string
+          roundId?: string
+          fixtureNumber?: number
+          homeTeamId?: string
+          awayTeamId?: string
+          homePlaceholder?: string
+          awayPlaceholder?: string
+          scheduledDate?: string
+          scheduledTime?: string
+          groundSlotId?: string
+        }
+      }
+    ) => {
+      return prisma.tournamentFixture.create({
+        data: {
+          tournamentId: input.tournamentId,
+          roundId: input.roundId,
+          fixtureNumber: input.fixtureNumber,
+          homeTeamId: input.homeTeamId,
+          awayTeamId: input.awayTeamId,
+          homePlaceholder: input.homePlaceholder,
+          awayPlaceholder: input.awayPlaceholder,
+          scheduledDate: input.scheduledDate ? new Date(input.scheduledDate) : null,
+          scheduledTime: input.scheduledTime,
+          groundSlotId: input.groundSlotId,
+          status: input.homeTeamId && input.awayTeamId ? 'SCHEDULED' : 'TBD',
+        },
+      })
+    },
+
+    updateFixtureResult: async (
+      _: unknown,
+      { id, input }: {
+        id: string
+        input: {
+          status?: string
+          homeScore?: string
+          awayScore?: string
+          winnerId?: string
+          resultSummary?: string
+          homePoints?: number
+          awayPoints?: number
+          isTie?: boolean
+          isNoResult?: boolean
+        }
+      }
+    ) => {
+      const updateData: Record<string, unknown> = {}
+      
+      if (input.status !== undefined) updateData.status = input.status
+      if (input.homeScore !== undefined) updateData.homeScore = input.homeScore
+      if (input.awayScore !== undefined) updateData.awayScore = input.awayScore
+      if (input.winnerId !== undefined) updateData.winnerId = input.winnerId
+      if (input.resultSummary !== undefined) updateData.resultSummary = sanitizeString(input.resultSummary, 500)
+      if (input.homePoints !== undefined) updateData.homePoints = input.homePoints
+      if (input.awayPoints !== undefined) updateData.awayPoints = input.awayPoints
+      if (input.isTie !== undefined) updateData.isTie = input.isTie
+      if (input.isNoResult !== undefined) updateData.isNoResult = input.isNoResult
+
+      const fixture = await prisma.tournamentFixture.update({
+        where: { id },
+        data: updateData,
+        include: { homeTeam: true, awayTeam: true },
+      })
+
+      // Update team stats if result is set
+      if (input.winnerId || input.isTie || input.isNoResult) {
+        if (fixture.homeTeamId && fixture.awayTeamId) {
+          // Update wins/losses/draws based on result
+          if (input.winnerId === fixture.homeTeamId) {
+            await prisma.tournamentTeam.update({
+              where: { id: fixture.homeTeamId },
+              data: { wins: { increment: 1 }, points: { increment: input.homePoints || 1 } },
+            })
+            await prisma.tournamentTeam.update({
+              where: { id: fixture.awayTeamId },
+              data: { losses: { increment: 1 }, points: { increment: input.awayPoints || 0 } },
+            })
+          } else if (input.winnerId === fixture.awayTeamId) {
+            await prisma.tournamentTeam.update({
+              where: { id: fixture.awayTeamId },
+              data: { wins: { increment: 1 }, points: { increment: input.awayPoints || 1 } },
+            })
+            await prisma.tournamentTeam.update({
+              where: { id: fixture.homeTeamId },
+              data: { losses: { increment: 1 }, points: { increment: input.homePoints || 0 } },
+            })
+          } else if (input.isTie) {
+            await prisma.tournamentTeam.update({
+              where: { id: fixture.homeTeamId },
+              data: { draws: { increment: 1 }, points: { increment: input.homePoints || 0.5 } },
+            })
+            await prisma.tournamentTeam.update({
+              where: { id: fixture.awayTeamId },
+              data: { draws: { increment: 1 }, points: { increment: input.awayPoints || 0.5 } },
+            })
+          }
+        }
+      }
+
+      return fixture
+    },
+
+    createGroundSlot: async (
+      _: unknown,
+      { input }: {
+        input: {
+          tournamentId: string
+          venueId: string
+          date: string
+          startTime: string
+          endTime: string
+          slotNumber?: number
+          isPrimary?: boolean
+          maxCapacity?: number
+        }
+      }
+    ) => {
+      return prisma.groundSlot.create({
+        data: {
+          tournamentId: input.tournamentId,
+          venueId: input.venueId,
+          date: new Date(input.date),
+          startTime: input.startTime,
+          endTime: input.endTime,
+          slotNumber: input.slotNumber,
+          isPrimary: input.isPrimary ?? true,
+          maxCapacity: input.maxCapacity,
+          isAvailable: true,
+        },
+      })
+    },
+
+    updateGroundSlot: async (
+      _: unknown,
+      { id, input }: {
+        id: string
+        input: {
+          isAvailable?: boolean
+          isBlocked?: boolean
+          blockReason?: string
+        }
+      }
+    ) => {
+      return prisma.groundSlot.update({
+        where: { id },
+        data: {
+          isAvailable: input.isAvailable,
+          isBlocked: input.isBlocked,
+          blockReason: sanitizeString(input.blockReason, 500),
+        },
+      })
+    },
+  },
+
+  // ============================================
+  // TOURNAMENT RESOLVERS
+  // ============================================
+  Tournament: {
+    teams: async (parent: { id: string }) => {
+      return prisma.tournamentTeam.findMany({
+        where: { tournamentId: parent.id },
+        orderBy: [{ points: 'desc' }, { buchholzScore: 'desc' }],
+      })
+    },
+    rounds: async (parent: { id: string }) => {
+      return prisma.tournamentRound.findMany({
+        where: { tournamentId: parent.id },
+        orderBy: { roundNumber: 'asc' },
+      })
+    },
+    fixtures: async (parent: { id: string }) => {
+      return prisma.tournamentFixture.findMany({
+        where: { tournamentId: parent.id },
+        orderBy: [{ scheduledDate: 'asc' }, { scheduledTime: 'asc' }],
+        include: { homeTeam: true, awayTeam: true, groundSlot: { include: { venue: true } } },
+      })
+    },
+    groundSlots: async (parent: { id: string }) => {
+      return prisma.groundSlot.findMany({
+        where: { tournamentId: parent.id },
+        orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
+        include: { venue: true },
+      })
+    },
+    _count: async (parent: { id: string }) => {
+      const [teams, fixtures, rounds] = await Promise.all([
+        prisma.tournamentTeam.count({ where: { tournamentId: parent.id } }),
+        prisma.tournamentFixture.count({ where: { tournamentId: parent.id } }),
+        prisma.tournamentRound.count({ where: { tournamentId: parent.id } }),
+      ])
+      return { teams, fixtures, rounds }
+    },
+  },
+
+  TournamentTeam: {
+    tournament: async (parent: { tournamentId: string }) => {
+      return prisma.tournament.findUnique({ where: { id: parent.tournamentId } })
+    },
+    homeFixtures: async (parent: { id: string }) => {
+      return prisma.tournamentFixture.findMany({
+        where: { homeTeamId: parent.id },
+        include: { awayTeam: true, round: true },
+      })
+    },
+    awayFixtures: async (parent: { id: string }) => {
+      return prisma.tournamentFixture.findMany({
+        where: { awayTeamId: parent.id },
+        include: { homeTeam: true, round: true },
+      })
+    },
+  },
+
+  TournamentRound: {
+    tournament: async (parent: { tournamentId: string }) => {
+      return prisma.tournament.findUnique({ where: { id: parent.tournamentId } })
+    },
+    fixtures: async (parent: { id: string }) => {
+      return prisma.tournamentFixture.findMany({
+        where: { roundId: parent.id },
+        include: { homeTeam: true, awayTeam: true },
+        orderBy: { fixtureNumber: 'asc' },
+      })
+    },
+  },
+
+  TournamentFixture: {
+    tournament: async (parent: { tournamentId: string }) => {
+      return prisma.tournament.findUnique({ where: { id: parent.tournamentId } })
+    },
+    round: async (parent: { roundId: string | null }) => {
+      if (!parent.roundId) return null
+      return prisma.tournamentRound.findUnique({ where: { id: parent.roundId } })
+    },
+    homeTeam: async (parent: { homeTeamId: string | null }) => {
+      if (!parent.homeTeamId) return null
+      return prisma.tournamentTeam.findUnique({ where: { id: parent.homeTeamId } })
+    },
+    awayTeam: async (parent: { awayTeamId: string | null }) => {
+      if (!parent.awayTeamId) return null
+      return prisma.tournamentTeam.findUnique({ where: { id: parent.awayTeamId } })
+    },
+    winner: async (parent: { winnerId: string | null }) => {
+      if (!parent.winnerId) return null
+      return prisma.tournamentTeam.findUnique({ where: { id: parent.winnerId } })
+    },
+    groundSlot: async (parent: { groundSlotId: string | null }) => {
+      if (!parent.groundSlotId) return null
+      return prisma.groundSlot.findUnique({
+        where: { id: parent.groundSlotId },
+        include: { venue: true },
+      })
+    },
+  },
+
+  GroundSlot: {
+    tournament: async (parent: { tournamentId: string }) => {
+      return prisma.tournament.findUnique({ where: { id: parent.tournamentId } })
+    },
+    venue: async (parent: { venueId: string }) => {
+      return prisma.venue.findUnique({ where: { id: parent.venueId } })
+    },
+    fixtures: async (parent: { id: string }) => {
+      return prisma.tournamentFixture.findMany({
+        where: { groundSlotId: parent.id },
+        include: { homeTeam: true, awayTeam: true },
+      })
     },
   },
 }

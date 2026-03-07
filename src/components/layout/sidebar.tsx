@@ -22,6 +22,7 @@ import {
   X,
   Target,
   Calculator,
+  CalendarClock,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -31,7 +32,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname()
-  const { user, logout, isAdmin, isMediaManager } = useAuth()
+  const { user, logout, isAdmin, isTournamentManager, isMediaManager } = useAuth()
   const permissions = usePermissions()
 
   // Navigation items with permission checks
@@ -41,6 +42,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
     { name: 'Matches', href: '/matches', icon: Calendar, allowed: permissions.canViewMatches, adminOnly: permissions.canManageMatches },
     { name: 'Squad Selector', href: '/squad', icon: Sparkles, allowed: permissions.canUseAISelector, adminOnly: true, aiFeature: true },
     { name: 'Practice Match', href: '/practice', icon: Target, allowed: isAdmin, adminOnly: true },
+    { name: 'Tournament', href: '/tournament', icon: CalendarClock, allowed: permissions.canManageTournaments, tournamentManager: true, aiFeature: true },
     { name: 'AI Ratings', href: '/ratings', icon: Calculator, allowed: permissions.canManageStats, adminOnly: true, aiFeature: true },
     { name: 'Opponents', href: '/opponents', icon: Swords, allowed: isAdmin },
     { name: 'Venues', href: '/venues', icon: MapPin, allowed: isAdmin },
@@ -182,6 +184,11 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   <Shield className="h-4 w-4 text-stumps-400" />
                   <span className="text-xs font-semibold text-stumps-400">ADMIN</span>
                 </>
+              ) : isTournamentManager ? (
+                <>
+                  <CalendarClock className="h-4 w-4 text-cyan-400" />
+                  <span className="text-xs font-semibold text-cyan-400">TOURNAMENT MANAGER</span>
+                </>
               ) : isMediaManager ? (
                 <>
                   <Image className="h-4 w-4 text-purple-400" />
@@ -196,7 +203,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
             </div>
             <p className="text-sm font-medium text-white truncate">{user?.username}</p>
             <p className="mt-1 text-xs text-midnight-400">
-              {isAdmin ? 'Full access' : isMediaManager ? 'Media & stats access' : 'View-only'}
+              {isAdmin ? 'Full access' : isTournamentManager ? 'Tournament scheduling' : isMediaManager ? 'Media & stats access' : 'View-only'}
             </p>
           </div>
         </nav>

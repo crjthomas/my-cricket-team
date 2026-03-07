@@ -106,6 +106,8 @@ export async function POST(request: NextRequest) {
     let userRole: UserRole
     if (role === 'ADMIN') {
       userRole = UserRole.ADMIN
+    } else if (role === 'TOURNAMENT_MANAGER') {
+      userRole = UserRole.TOURNAMENT_MANAGER
     } else if (role === 'MEDIA_MANAGER') {
       userRole = UserRole.MEDIA_MANAGER
     } else {
@@ -120,7 +122,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const roleDisplayName = userRole === UserRole.ADMIN ? 'Admin' : userRole === UserRole.MEDIA_MANAGER ? 'Media Manager' : 'Viewer'
+    const roleDisplayName = userRole === UserRole.ADMIN ? 'Admin' : userRole === UserRole.TOURNAMENT_MANAGER ? 'Tournament Manager' : userRole === UserRole.MEDIA_MANAGER ? 'Media Manager' : 'Viewer'
 
     // Log user creation activity
     await prisma.activity.create({

@@ -69,9 +69,10 @@ model Session {
 }
 
 enum UserRole {
-  ADMIN           // Full access: AI selector, squad management, player management, settings
-  MEDIA_MANAGER   // Media & stats: gallery, press releases, match statistics, social media
-  USER            // View only: team updates, gallery, match info, player profiles
+  ADMIN              // Full access: AI selector, squad management, player management, settings
+  TOURNAMENT_MANAGER // Tournament scheduling, team registration, ground allocation
+  MEDIA_MANAGER      // Media & stats: gallery, press releases, match statistics, social media
+  USER               // View only: team updates, gallery, match info, player profiles
 }
 
 // ============================================
@@ -455,6 +456,7 @@ model Venue {
   averageFirstInningsScore Int?
 
   matches Match[]
+  groundSlots GroundSlot[]
 
   @@map("venues")
 }
@@ -762,5 +764,283 @@ enum RatingSkillType {
   POWER_HITTING
   RUNNING_BETWEEN_WICKETS
   PRESSURE_HANDLING
+}
+
+// ============================================
+// TOURNAMENT MANAGEMENT
+// ============================================
+
+model Tournament {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  status      TournamentStatus @default(DRAFT)
+  
+  // Format Configuration (AI-parsed from document)
+  formatType      TournamentFormat @default(SWISS)
+  formatDocument  String?           // URL to uploaded format document
+  formatRules     Json?             // AI-extracted rules stored as JSON
+  
+  // Configuration
+  totalRounds     Int?
+  teamsPerMatch   Int      @default(2)   // Usually 2 for cricket
+  matchesPerDay   Int      @default(4)
+  matchDuration   Int      @default(180)  // minutes
+  breakBetween    Int      @default(30)   // minutes between matches
+  matchFormat     MatchFormat @default(T20)
+  overs           Int      @default(20)
+  
+  // AI Scheduling
+  aiScheduleNotes  String?   // AI assistant notes/recommendations
+  lastAiAnalysis   DateTime?
+  
+  teams           TournamentTeam[]
+  rounds          TournamentRound[]
+  fixtures        TournamentFixture[]
+  groundSlots     GroundSlot[]
+  
+  @@map("tournaments")
+}
+
+enum TournamentStatus {
+  DRAFT
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  SCHEDULING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TournamentFormat {
+  SWISS
+  KNOCKOUT
+  ROUND_ROBIN
+  GROUP_STAGE_KNOCKOUT
+  DOUBLE_ELIMINATION
+  CUSTOM
+}
+
+// Teams participating in tournament
+model TournamentTeam {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  
+  teamName     String
+  shortName    String?
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  logo         String?
+  seedRank     Int?       // For seeding in Swiss/Knockout
+  groupName    String?    // For group stage tournaments (e.g., "Group A")
+  
+  // Swiss System specific
+  points        Float @default(0)  // Float for 0.5 draws
+  buchholzScore Float @default(0)  // Tiebreaker: sum of opponents' scores
+  wins          Int   @default(0)
+  losses        Int   @default(0)
+  draws         Int   @default(0)
+  
+  // Net Run Rate for cricket
+  runsScored    Int   @default(0)
+  runsConceded  Int   @default(0)
+  oversPlayed   Float @default(0)
+  oversBowled   Float @default(0)
+  
+  // Status
+  isConfirmed   Boolean @default(false)
+  isWithdrawn   Boolean @default(false)
+  withdrawReason String?
+  
+  homeFixtures  TournamentFixture[] @relation("HomeTeam")
+  awayFixtures  TournamentFixture[] @relation("AwayTeam")
+  wonFixtures   TournamentFixture[] @relation("Winner")
+  
+  @@unique([tournamentId, teamName])
+  @@map("tournament_teams")
+}
+
+// Rounds (for Swiss/staged tournaments)
+model TournamentRound {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  
+  roundNumber  Int
+  roundName    String?   // "Quarter Finals", "Round 3", etc.
+  roundType    RoundType @default(LEAGUE)
+  status       RoundStatus @default(PENDING)
+  startDate    DateTime?
+  endDate      DateTime?
+  
+  // AI-generated pairing notes
+  pairingNotes String?
+  
+  fixtures     TournamentFixture[]
+  
+  @@unique([tournamentId, roundNumber])
+  @@map("tournament_rounds")
+}
+
+enum RoundStatus {
+  PENDING
+  SCHEDULING
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum RoundType {
+  LEAGUE
+  GROUP_STAGE
+  QUARTER_FINAL
+  SEMI_FINAL
+  FINAL
+  THIRD_PLACE
+  PRELIMINARY
+}
+
+// Individual tournament matches
+model TournamentFixture {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  fixtureNumber Int?     // Match number in tournament
+  
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  
+  roundId      String?
+  round        TournamentRound? @relation(fields: [roundId], references: [id])
+  
+  // Teams
+  homeTeamId   String?
+  homeTeam     TournamentTeam? @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeamId   String?
+  awayTeam     TournamentTeam? @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  
+  // TBD placeholders for knockout stages
+  homePlaceholder String?  // "Winner of Match 5", "1st Group A"
+  awayPlaceholder String?  // "Runner-up Group B"
+  
+  // Scheduling
+  scheduledDate DateTime?
+  scheduledTime String?    // "10:00 AM"
+  groundSlotId  String?
+  groundSlot    GroundSlot? @relation(fields: [groundSlotId], references: [id])
+  
+  // Result
+  status        FixtureStatus @default(SCHEDULED)
+  homeScore     String?    // "185/6 (20)"
+  awayScore     String?    // "172/9 (20)"
+  winnerId      String?
+  winner        TournamentTeam? @relation("Winner", fields: [winnerId], references: [id])
+  resultSummary String?    // "Team A won by 5 wickets"
+  isTie         Boolean @default(false)
+  isNoResult    Boolean @default(false)
+  
+  // Points awarded
+  homePoints    Float @default(0)
+  awayPoints    Float @default(0)
+  
+  // Rescheduling
+  originalDate     DateTime?
+  originalSlotId   String?
+  rescheduleReason String?
+  rescheduleCount  Int @default(0)
+  
+  // Notes
+  umpires       String?
+  notes         String?
+  
+  @@map("tournament_fixtures")
+}
+
+enum FixtureStatus {
+  TBD           // Teams not yet determined (knockout placeholders)
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  POSTPONED
+  CANCELLED
+  WALKOVER      // One team didn't show up
+}
+
+// Ground availability slots for tournament
+model GroundSlot {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  
+  venueId      String
+  venue        Venue    @relation(fields: [venueId], references: [id])
+  
+  date         DateTime
+  startTime    String   // "09:00"
+  endTime      String   // "12:00"
+  slotNumber   Int?     // 1, 2, 3, 4 for multiple slots per day
+  
+  isAvailable  Boolean @default(true)
+  isBlocked    Boolean @default(false)
+  blockReason  String?
+  
+  // Capacity/priority
+  isPrimary    Boolean @default(true)  // Primary venue vs backup
+  maxCapacity  Int?
+  
+  fixtures     TournamentFixture[]
+  
+  @@map("ground_slots")
+}
+
+// AI Scheduling interactions for tournament
+model TournamentAiLog {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  
+  tournamentId String
+  
+  actionType   TournamentAiAction
+  prompt       String
+  response     String
+  tokensUsed   Int?
+  
+  // What was affected
+  affectedFixtures String[]  // IDs of fixtures created/modified
+  affectedRounds   String[]  // IDs of rounds affected
+  
+  // User feedback
+  wasApplied   Boolean @default(false)
+  wasHelpful   Boolean?
+  userNotes    String?
+  
+  @@map("tournament_ai_logs")
+}
+
+enum TournamentAiAction {
+  FORMAT_ANALYSIS
+  SCHEDULE_GENERATION
+  PAIRING_SUGGESTION
+  RESCHEDULE_SUGGESTION
+  GROUND_OPTIMIZATION
+  CONFLICT_RESOLUTION
+  STANDINGS_CALCULATION
 }
 

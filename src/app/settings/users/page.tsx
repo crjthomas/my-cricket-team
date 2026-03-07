@@ -23,13 +23,14 @@ import {
   Calendar,
   Zap,
   Camera,
-  MoreVertical
+  MoreVertical,
+  CalendarClock
 } from 'lucide-react'
 
 interface UserData {
   id: string
   username: string
-  role: 'ADMIN' | 'MEDIA_MANAGER' | 'USER'
+  role: 'ADMIN' | 'TOURNAMENT_MANAGER' | 'MEDIA_MANAGER' | 'USER'
   isActive: boolean
   lastLoginAt: string | null
   createdAt: string
@@ -60,7 +61,7 @@ export default function UserManagementPage() {
   const [showNewUserForm, setShowNewUserForm] = useState(false)
   const [newUsername, setNewUsername] = useState('')
   const [newPassword, setNewPassword] = useState('')
-  const [newRole, setNewRole] = useState<'ADMIN' | 'MEDIA_MANAGER' | 'USER'>('USER')
+  const [newRole, setNewRole] = useState<'ADMIN' | 'TOURNAMENT_MANAGER' | 'MEDIA_MANAGER' | 'USER'>('USER')
   const [isCreating, setIsCreating] = useState(false)
 
   useEffect(() => {
@@ -158,7 +159,7 @@ export default function UserManagementPage() {
     }
   }
 
-  const updateUserRole = async (userId: string, newRole: 'ADMIN' | 'MEDIA_MANAGER' | 'USER') => {
+  const updateUserRole = async (userId: string, newRole: 'ADMIN' | 'TOURNAMENT_MANAGER' | 'MEDIA_MANAGER' | 'USER') => {
     setError('')
     setSuccess('')
 
@@ -316,11 +317,12 @@ export default function UserManagementPage() {
                   <label className="text-sm font-medium">Role</label>
                   <select
                     value={newRole}
-                    onChange={(e) => setNewRole(e.target.value as 'ADMIN' | 'MEDIA_MANAGER' | 'USER')}
+                    onChange={(e) => setNewRole(e.target.value as 'ADMIN' | 'TOURNAMENT_MANAGER' | 'MEDIA_MANAGER' | 'USER')}
                     className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                   >
                     <option value="USER">Viewer (View Only)</option>
                     <option value="MEDIA_MANAGER">Media Manager (Media & Stats)</option>
+                    <option value="TOURNAMENT_MANAGER">Tournament Manager (Scheduling)</option>
                     <option value="ADMIN">Admin (Full Access)</option>
                   </select>
                 </div>
@@ -361,12 +363,16 @@ export default function UserManagementPage() {
                   <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
                     u.role === 'ADMIN' 
                       ? 'bg-amber-100 text-amber-600' 
+                      : u.role === 'TOURNAMENT_MANAGER'
+                      ? 'bg-cyan-100 text-cyan-600'
                       : u.role === 'MEDIA_MANAGER'
                       ? 'bg-purple-100 text-purple-600'
                       : 'bg-gray-200 text-gray-600'
                   }`}>
                     {u.role === 'ADMIN' ? (
                       <Shield className="h-5 w-5" />
+                    ) : u.role === 'TOURNAMENT_MANAGER' ? (
+                      <CalendarClock className="h-5 w-5" />
                     ) : u.role === 'MEDIA_MANAGER' ? (
                       <Camera className="h-5 w-5" />
                     ) : (
@@ -404,21 +410,25 @@ export default function UserManagementPage() {
                 <div className="flex items-center gap-3">
                   <Badge 
                     variant={u.role === 'ADMIN' ? 'default' : 'secondary'}
-                    className={u.role === 'MEDIA_MANAGER' ? 'bg-purple-100 text-purple-700 border-purple-200' : ''}
+                    className={
+                      u.role === 'TOURNAMENT_MANAGER' ? 'bg-cyan-100 text-cyan-700 border-cyan-200' : 
+                      u.role === 'MEDIA_MANAGER' ? 'bg-purple-100 text-purple-700 border-purple-200' : ''
+                    }
                   >
-                    {u.role === 'ADMIN' ? 'Admin' : u.role === 'MEDIA_MANAGER' ? 'Media Manager' : 'Viewer'}
+                    {u.role === 'ADMIN' ? 'Admin' : u.role === 'TOURNAMENT_MANAGER' ? 'Tournament Manager' : u.role === 'MEDIA_MANAGER' ? 'Media Manager' : 'Viewer'}
                   </Badge>
 
                   {u.id !== user?.id && (
                     <div className="flex items-center gap-1">
                       <select
                         value={u.role}
-                        onChange={(e) => updateUserRole(u.id, e.target.value as 'ADMIN' | 'MEDIA_MANAGER' | 'USER')}
+                        onChange={(e) => updateUserRole(u.id, e.target.value as 'ADMIN' | 'TOURNAMENT_MANAGER' | 'MEDIA_MANAGER' | 'USER')}
                         className="text-sm px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                         title="Change role"
                       >
                         <option value="USER">Viewer</option>
                         <option value="MEDIA_MANAGER">Media Manager</option>
+                        <option value="TOURNAMENT_MANAGER">Tournament Manager</option>
                         <option value="ADMIN">Admin</option>
                       </select>
                       <Button
@@ -450,7 +460,7 @@ export default function UserManagementPage() {
           <CardTitle>Role Permissions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-amber-600" />
@@ -462,6 +472,19 @@ export default function UserManagementPage() {
                 <li>Add/Edit players, matches, venues</li>
                 <li>Manage team settings</li>
                 <li>Create and manage users</li>
+              </ul>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <CalendarClock className="h-5 w-5 text-cyan-600" />
+                <span className="font-semibold">Tournament Manager</span>
+              </div>
+              <ul className="text-sm text-gray-600 space-y-1 ml-7">
+                <li>All Viewer permissions</li>
+                <li>Create/manage tournaments</li>
+                <li>AI scheduling assistant</li>
+                <li>Team registration</li>
+                <li>Ground slot management</li>
               </ul>
             </div>
             <div className="space-y-2">
