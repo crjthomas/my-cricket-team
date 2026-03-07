@@ -877,6 +877,18 @@ export const typeDefs = gql`
     
     createGroundSlot(input: CreateGroundSlotInput!): GroundSlot!
     updateGroundSlot(id: ID!, input: UpdateGroundSlotInput!): GroundSlot!
+    
+    # AI Tournament Analysis
+    analyzeTournamentFormat(documentText: String!): FormatAnalysisResult!
+  }
+
+  type FormatAnalysisResult {
+    formatType: String!
+    totalRounds: Int
+    pairingRules: [String!]!
+    tiebreakerRules: [String!]!
+    specialRules: [String!]!
+    suggestions: String!
   }
 
   # ============================================

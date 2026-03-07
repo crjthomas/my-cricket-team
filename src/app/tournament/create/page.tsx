@@ -93,7 +93,11 @@ export default function CreateTournamentPage() {
   ]
 
   const handleAnalyzeFormat = async () => {
-    if (!formData.formatDocument) return
+    const textToAnalyze = formData.customRulesText || formData.formatDocument
+    if (!textToAnalyze) {
+      alert('Please enter the tournament format rules text to analyze.')
+      return
+    }
     
     setAiAnalyzing(true)
     try {
@@ -102,21 +106,27 @@ export default function CreateTournamentPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: `
-            mutation AnalyzeTournamentFormat($documentUrl: String!) {
-              analyzeTournamentFormat(documentUrl: $documentUrl) {
+            mutation AnalyzeTournamentFormat($documentText: String!) {
+              analyzeTournamentFormat(documentText: $documentText) {
                 formatType
                 totalRounds
                 pairingRules
                 tiebreakerRules
+                specialRules
                 suggestions
               }
             }
           `,
-          variables: { documentUrl: formData.formatDocument }
+          variables: { documentText: textToAnalyze }
         })
       })
       
-      const { data } = await response.json()
+      const { data, errors } = await response.json()
+      if (errors) {
+        console.error('GraphQL errors:', errors)
+        setAiSuggestions('AI analysis failed. Please try again.')
+        return
+      }
       if (data?.analyzeTournamentFormat) {
         const result = data.analyzeTournamentFormat
         setAiSuggestions(result.suggestions)
@@ -452,19 +462,33 @@ export default function CreateTournamentPage() {
                       : 'Upload additional rules or modifications to the standard format'}
                   </p>
                   
-                  {/* URL Input */}
+                  {/* Rules Text Input */}
                   <div className="space-y-3">
-                    <div className="flex gap-2">
-                      <input
-                        type="url"
-                        value={formData.formatDocument}
-                        onChange={(e) => setFormData({ ...formData, formatDocument: e.target.value })}
-                        className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-white"
-                        placeholder="https://docs.google.com/... or paste document URL"
+                    <div className="space-y-2">
+                      <label className={cn(
+                        "text-sm font-medium",
+                        formData.formatType === 'CUSTOM' ? "text-purple-700" : "text-cyan-700"
+                      )}>
+                        Paste the tournament format rules:
+                      </label>
+                      <textarea
+                        value={formData.customRulesText || ''}
+                        onChange={(e) => setFormData({ ...formData, customRulesText: e.target.value })}
+                        className={cn(
+                          "w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 bg-white",
+                          formData.formatType === 'CUSTOM' 
+                            ? "focus:ring-purple-500" 
+                            : "focus:ring-cyan-500"
+                        )}
+                        placeholder="Paste or type the tournament format rules here...&#10;&#10;Example:&#10;- Swiss system with 5 rounds&#10;- Teams are paired based on points (higher plays higher)&#10;- Tiebreaker 1: Buchholz score (sum of opponents' points)&#10;- Tiebreaker 2: Net Run Rate&#10;- Top 4 teams qualify for knockouts&#10;- No team plays same opponent twice"
+                        rows={6}
                       />
+                    </div>
+                    
+                    <div className="flex justify-end">
                       <Button 
                         onClick={handleAnalyzeFormat}
-                        disabled={!formData.formatDocument || aiAnalyzing}
+                        disabled={!formData.customRulesText || aiAnalyzing}
                         className="gap-2"
                         variant={formData.formatType === 'CUSTOM' ? 'default' : 'outline'}
                       >
@@ -476,22 +500,6 @@ export default function CreateTournamentPage() {
                         Analyze with AI
                       </Button>
                     </div>
-                    
-                    {/* Manual Rules Input for Custom Format */}
-                    {formData.formatType === 'CUSTOM' && (
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-purple-700">
-                          Or describe the rules manually:
-                        </label>
-                        <textarea
-                          value={formData.customRulesText || ''}
-                          onChange={(e) => setFormData({ ...formData, customRulesText: e.target.value })}
-                          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
-                          placeholder="Describe the tournament format rules...&#10;&#10;Example:&#10;- Teams are paired based on points&#10;- Tiebreaker: Net Run Rate&#10;- Top 4 teams qualify for knockouts"
-                          rows={5}
-                        />
-                      </div>
-                    )}
                   </div>
                   
                   {aiSuggestions && (

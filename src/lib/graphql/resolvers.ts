@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { generateSquadRecommendation } from '@/lib/ai/squad-selector'
+import { analyzeFormatDocument } from '@/lib/ai/tournament-scheduler'
 import { calculatePlayerRatingChanges, calculateAllPlayerRatingChanges, applyRatingChanges } from '@/lib/rating-calculator'
 import { GraphQLScalarType, Kind } from 'graphql'
 import type { Player, SeasonStats, Match, Opponent, Season, Squad, SquadPlayer, PlayerAvailability, RatingHistory } from '@prisma/client'
@@ -1940,6 +1941,39 @@ export const resolvers = {
           blockReason: sanitizeString(input.blockReason, 500),
         },
       })
+    },
+
+    analyzeTournamentFormat: async (
+      _: unknown,
+      { documentText }: { documentText: string }
+    ) => {
+      if (!documentText || documentText.trim().length < 10) {
+        return {
+          formatType: 'CUSTOM',
+          totalRounds: null,
+          pairingRules: [],
+          tiebreakerRules: [],
+          specialRules: [],
+          suggestions: 'Please provide the tournament format rules text for AI analysis.'
+        }
+      }
+
+      try {
+        const result = await analyzeFormatDocument({ 
+          documentText: sanitizeString(documentText, 15000) || '' 
+        })
+        return result
+      } catch (error) {
+        console.error('AI format analysis error:', error)
+        return {
+          formatType: 'CUSTOM',
+          totalRounds: null,
+          pairingRules: [],
+          tiebreakerRules: [],
+          specialRules: [],
+          suggestions: 'AI analysis failed. Please describe the format manually or try again.'
+        }
+      }
     },
   },
 
