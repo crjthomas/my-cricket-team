@@ -157,7 +157,7 @@ Important: Return ONLY valid JSON, no markdown or explanations outside the JSON.
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -232,7 +232,7 @@ Return ONLY valid JSON.`
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -252,6 +252,19 @@ Return ONLY valid JSON.`
 
 export async function analyzeFormatDocument(input: FormatAnalysisInput): Promise<FormatAnalysisResult> {
   const { documentText } = input
+
+  // Check for API key
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('ANTHROPIC_API_KEY is not set')
+    return {
+      formatType: 'CUSTOM',
+      totalRounds: null,
+      pairingRules: [],
+      tiebreakerRules: [],
+      specialRules: [],
+      suggestions: 'AI analysis not available. API key not configured. Please configure the format manually.',
+    }
+  }
 
   const prompt = `You are an expert in cricket tournament formats. Analyze the following tournament format document and extract the key rules.
 
@@ -280,7 +293,7 @@ Return ONLY valid JSON.`
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -290,17 +303,26 @@ Return ONLY valid JSON.`
       throw new Error('Unexpected response type')
     }
 
-    const result = JSON.parse(content.text.trim())
+    // Try to extract JSON from the response
+    let jsonText = content.text.trim()
+    // Handle case where response might have markdown code blocks
+    const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (jsonMatch) {
+      jsonText = jsonMatch[1].trim()
+    }
+
+    const result = JSON.parse(jsonText)
     return result as FormatAnalysisResult
   } catch (error) {
     console.error('Format analysis AI error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return {
       formatType: 'CUSTOM',
       totalRounds: null,
       pairingRules: [],
       tiebreakerRules: [],
       specialRules: [],
-      suggestions: 'Unable to analyze document automatically. Please configure manually.',
+      suggestions: `AI analysis failed: ${errorMessage}. Please configure the format manually.`,
     }
   }
 }
