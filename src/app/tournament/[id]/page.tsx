@@ -97,6 +97,8 @@ export default function TournamentDetailPage() {
   const [showAddTeam, setShowAddTeam] = useState(false)
   const [newTeamName, setNewTeamName] = useState('')
   const [isAddingTeam, setIsAddingTeam] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     if (tournamentId) fetchTournament()
@@ -212,6 +214,40 @@ export default function TournamentDetailPage() {
       console.error('Failed to add team:', error)
     } finally {
       setIsAddingTeam(false)
+    }
+  }
+
+  const deleteTournament = async () => {
+    setIsDeleting(true)
+    try {
+      const response = await fetch('/api/graphql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            mutation DeleteTournament($id: ID!) {
+              deleteTournament(id: $id)
+            }
+          `,
+          variables: { id: tournamentId }
+        })
+      })
+      
+      const { data, errors } = await response.json()
+      if (errors) {
+        console.error('Failed to delete tournament:', errors)
+        alert('Failed to delete tournament. Please try again.')
+        return
+      }
+      if (data?.deleteTournament) {
+        router.push('/tournament')
+      }
+    } catch (error) {
+      console.error('Failed to delete tournament:', error)
+      alert('Failed to delete tournament. Please try again.')
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteConfirm(false)
     }
   }
 
@@ -622,8 +658,62 @@ export default function TournamentDetailPage() {
                     <Sparkles className="h-4 w-4" />
                     AI Swiss Pairing
                   </Button>
+                  <div className="border-t pt-3 mt-3">
+                    <Button 
+                      className="w-full justify-start gap-2 text-red-600 hover:bg-red-50 hover:text-red-700" 
+                      variant="outline"
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete Tournament
+                    </Button>
+                  </div>
                 </>
               )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-600">
+                <AlertCircle className="h-5 w-5" />
+                Delete Tournament
+              </CardTitle>
+              <CardDescription>
+                This action cannot be undone. All teams, fixtures, and related data will be permanently deleted.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm mb-4">
+                Are you sure you want to delete <strong>{tournament.name}</strong>?
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={deleteTournament}
+                  disabled={isDeleting}
+                  className="gap-2"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                  Delete
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
