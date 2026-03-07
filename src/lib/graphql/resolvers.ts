@@ -1584,10 +1584,17 @@ export const resolvers = {
           overs: number
           totalRounds?: number
           matchesPerDay?: number
+          slotsPerVenue?: number
           matchDuration?: number
           breakBetween?: number
           formatDocument?: string
           formatRules?: object
+          weekendsOnly?: boolean
+          saturdayVenues?: number
+          saturdaySlots?: number
+          sundayVenues?: number
+          sundaySlots?: number
+          sundayMorningOnly?: boolean
         }
       }
     ) => {
@@ -1601,12 +1608,19 @@ export const resolvers = {
           matchFormat: input.matchFormat as 'T20' | 'T30' | 'T10' | 'ODI' | 'OTHER',
           overs: input.overs,
           totalRounds: input.totalRounds,
-          matchesPerDay: input.matchesPerDay || 4,
+          matchesPerDay: input.matchesPerDay || 12,
+          slotsPerVenue: input.slotsPerVenue || 2,
           matchDuration: input.matchDuration || 180,
           breakBetween: input.breakBetween || 30,
           formatDocument: input.formatDocument,
           formatRules: input.formatRules || undefined,
           status: 'DRAFT',
+          weekendsOnly: input.weekendsOnly ?? true,
+          saturdayVenues: input.saturdayVenues ?? 6,
+          saturdaySlots: input.saturdaySlots ?? 2,
+          sundayVenues: input.sundayVenues ?? 2,
+          sundaySlots: input.sundaySlots ?? 1,
+          sundayMorningOnly: input.sundayMorningOnly ?? true,
         },
       })
 

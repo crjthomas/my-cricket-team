@@ -142,6 +142,11 @@ export default function CreateTournamentPage() {
   const handleCreate = async () => {
     setLoading(true)
     try {
+      // Calculate matches per day based on weekend settings
+      const effectiveMatchesPerDay = formData.weekendsOnly 
+        ? formData.saturdayVenues * formData.saturdaySlots  // Use Saturday as the default
+        : formData.matchesPerDay
+
       const response = await fetch('/api/graphql', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -158,17 +163,24 @@ export default function CreateTournamentPage() {
             input: {
               name: formData.name,
               description: formData.description || null,
-              startDate: formData.startDate,
-              endDate: formData.endDate || null,
+              startDate: new Date(formData.startDate).toISOString(),
+              endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
               formatType: formData.formatType,
               matchFormat: formData.matchFormat,
               overs: formData.overs,
               totalRounds: formData.totalRounds,
-              matchesPerDay: formData.matchesPerDay,
+              matchesPerDay: effectiveMatchesPerDay,
+              slotsPerVenue: formData.slotsPerVenue,
               matchDuration: formData.matchDuration,
               breakBetween: formData.breakBetween,
               formatDocument: formData.formatDocument || null,
-              formatRules: formData.aiParsedRules
+              formatRules: formData.aiParsedRules ? JSON.stringify(formData.aiParsedRules) : null,
+              weekendsOnly: formData.weekendsOnly,
+              saturdayVenues: formData.saturdayVenues,
+              saturdaySlots: formData.saturdaySlots,
+              sundayVenues: formData.sundayVenues,
+              sundaySlots: formData.sundayMorningOnly ? 1 : formData.sundaySlots,
+              sundayMorningOnly: formData.sundayMorningOnly
             }
           }
         })
@@ -177,6 +189,7 @@ export default function CreateTournamentPage() {
       const { data, errors } = await response.json()
       if (errors) {
         console.error('GraphQL errors:', errors)
+        alert('Failed to create tournament. Please check all required fields.')
         return
       }
       if (data?.createTournament?.id) {
@@ -184,6 +197,7 @@ export default function CreateTournamentPage() {
       }
     } catch (error) {
       console.error('Failed to create tournament:', error)
+      alert('Failed to create tournament. Please try again.')
     } finally {
       setLoading(false)
     }
