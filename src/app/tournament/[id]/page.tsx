@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -86,8 +86,9 @@ interface Tournament {
   rounds: TournamentRound[]
 }
 
-export default function TournamentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
+export default function TournamentDetailPage() {
+  const params = useParams()
+  const tournamentId = params.id as string
   const router = useRouter()
   const { canManageTournaments } = usePermissions()
   const [tournament, setTournament] = useState<Tournament | null>(null)
@@ -98,8 +99,8 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const [isAddingTeam, setIsAddingTeam] = useState(false)
 
   useEffect(() => {
-    fetchTournament()
-  }, [resolvedParams.id])
+    if (tournamentId) fetchTournament()
+  }, [tournamentId])
 
   const fetchTournament = async () => {
     try {
@@ -160,7 +161,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               }
             }
           `,
-          variables: { id: resolvedParams.id }
+          variables: { id: tournamentId }
         })
       })
       
@@ -194,7 +195,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
           `,
           variables: {
             input: {
-              tournamentId: resolvedParams.id,
+              tournamentId: tournamentId,
               teamName: newTeamName.trim()
             }
           }
@@ -608,7 +609,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                   <Button 
                     className="w-full justify-start gap-2" 
                     variant="outline"
-                    onClick={() => router.push(`/tournament/${resolvedParams.id}/venues`)}
+                    onClick={() => router.push(`/tournament/${tournamentId}/venues`)}
                   >
                     <MapPin className="h-4 w-4" />
                     Venue Availability

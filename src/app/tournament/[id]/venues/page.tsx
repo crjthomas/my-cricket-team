@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -57,8 +57,9 @@ interface Tournament {
   sundayMorningOnly: boolean
 }
 
-export default function TournamentVenuesPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
+export default function TournamentVenuesPage() {
+  const params = useParams()
+  const tournamentId = params.id as string
   const router = useRouter()
   const { canManageTournaments } = usePermissions()
   const [tournament, setTournament] = useState<Tournament | null>(null)
@@ -83,8 +84,8 @@ export default function TournamentVenuesPage({ params }: { params: Promise<{ id:
   }
 
   useEffect(() => {
-    fetchData()
-  }, [resolvedParams.id])
+    if (tournamentId) fetchData()
+  }, [tournamentId])
 
   const fetchData = async () => {
     try {
@@ -100,7 +101,7 @@ export default function TournamentVenuesPage({ params }: { params: Promise<{ id:
                 sundayVenues sundaySlots sundayMorningOnly 
               }
             }`,
-            variables: { id: resolvedParams.id }
+            variables: { id: tournamentId }
           })
         }),
         fetch('/api/graphql', {
@@ -121,7 +122,7 @@ export default function TournamentVenuesPage({ params }: { params: Promise<{ id:
                 isAvailable isBlocked blockReason isPrimary
               }
             }`,
-            variables: { tournamentId: resolvedParams.id }
+            variables: { tournamentId: tournamentId }
           })
         })
       ])
@@ -165,7 +166,7 @@ export default function TournamentVenuesPage({ params }: { params: Promise<{ id:
           }`,
           variables: {
             input: {
-              tournamentId: resolvedParams.id,
+              tournamentId: tournamentId,
               venueId: newSlot.venueId,
               date: newSlot.date,
               startTime: times.start,
@@ -297,7 +298,7 @@ export default function TournamentVenuesPage({ params }: { params: Promise<{ id:
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push(`/tournament/${resolvedParams.id}`)}>
+        <Button variant="ghost" size="icon" onClick={() => router.push(`/tournament/${tournamentId}`)}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
