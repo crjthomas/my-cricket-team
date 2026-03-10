@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { useAuth } from '@/lib/auth-context'
+import { useAuth, usePermissions } from '@/lib/auth-context'
+import { useRouter } from 'next/navigation'
 import { 
   Sparkles, 
   Check, 
@@ -182,7 +183,9 @@ const assignBattingOrder = (selectedPlayers: Player[]): Player[] => {
 }
 
 export default function SquadSelectorPage() {
-  const { isAdmin } = useAuth()
+  const { isAdmin, isLoading: authLoading } = useAuth()
+  const permissions = usePermissions()
+  const router = useRouter()
   const [matches, setMatches] = useState<Match[]>([])
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const [players, setPlayers] = useState<Player[]>([])
@@ -197,6 +200,13 @@ export default function SquadSelectorPage() {
   const [winProbability, setWinProbability] = useState<number>(0)
   const [fairnessScore, setFairnessScore] = useState<number>(0)
   const [isSavedSquad, setIsSavedSquad] = useState(false)
+
+  // Redirect non-admin users
+  useEffect(() => {
+    if (!authLoading && !permissions.canUseAISelector) {
+      router.push('/')
+    }
+  }, [authLoading, permissions.canUseAISelector, router])
 
   // Filter players available for the selected match format
   const availablePlayers = selectedMatch 

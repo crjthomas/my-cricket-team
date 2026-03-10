@@ -18,6 +18,7 @@ import {
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { AIAssistant } from '@/components/ai/ai-assistant'
+import { usePermissions } from '@/lib/auth-context'
 
 interface Season {
   id: string
@@ -61,6 +62,7 @@ interface Activity {
 }
 
 export default function DashboardPage() {
+  const permissions = usePermissions()
   const [loading, setLoading] = useState(true)
   const [season, setSeason] = useState<Season | null>(null)
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([])
@@ -228,12 +230,14 @@ export default function DashboardPage() {
             Welcome back! Here&apos;s your team overview.
           </p>
         </div>
-        <Link href="/squad">
-          <Button className="gap-2" variant="default">
-            <Sparkles className="h-4 w-4" />
-            AI Squad Selector
-          </Button>
-        </Link>
+        {permissions.canUseAISelector && (
+          <Link href="/squad">
+            <Button className="gap-2" variant="default">
+              <Sparkles className="h-4 w-4" />
+              AI Squad Selector
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Stats Grid */}
@@ -421,45 +425,47 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* AI Insights Card */}
-      <Card className="border-pitch-200 dark:border-pitch-800 bg-gradient-to-r from-pitch-50 to-transparent dark:from-pitch-950/50">
-        <CardContent className="p-6">
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-xl bg-pitch-100 dark:bg-pitch-900">
-              <Sparkles className="h-6 w-6 text-pitch-600 dark:text-pitch-400" />
+      {/* AI Insights Card - Admin only */}
+      {permissions.canUseAISelector && (
+        <Card className="border-pitch-200 dark:border-pitch-800 bg-gradient-to-r from-pitch-50 to-transparent dark:from-pitch-950/50">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 rounded-xl bg-pitch-100 dark:bg-pitch-900">
+                <Sparkles className="h-6 w-6 text-pitch-600 dark:text-pitch-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg mb-1">AI Squad Selector</h3>
+                <p className="text-muted-foreground mb-3">
+                  Use AI to analyze your team and opponents, then get optimal squad recommendations for upcoming matches.
+                </p>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-pitch-500" />
+                    <span>Win-focused, balanced, or opportunity-focused selection modes</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-pitch-500" />
+                    <span>Considers player form, opponent analysis, and pitch conditions</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-pitch-500" />
+                    <span>Tracks playing opportunities for fair team selection</span>
+                  </li>
+                </ul>
+              </div>
+              <Link href="/squad">
+                <Button variant="success" className="gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Get AI Squad
+                </Button>
+              </Link>
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-lg mb-1">AI Squad Selector</h3>
-              <p className="text-muted-foreground mb-3">
-                Use AI to analyze your team and opponents, then get optimal squad recommendations for upcoming matches.
-              </p>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-pitch-500" />
-                  <span>Win-focused, balanced, or opportunity-focused selection modes</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-pitch-500" />
-                  <span>Considers player form, opponent analysis, and pitch conditions</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-pitch-500" />
-                  <span>Tracks playing opportunities for fair team selection</span>
-                </li>
-              </ul>
-            </div>
-            <Link href="/squad">
-              <Button variant="success" className="gap-2">
-                <Sparkles className="h-4 w-4" />
-                Get AI Squad
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* AI Team Assistant */}
-      <AIAssistant />
+      {/* AI Team Assistant - Admin only */}
+      {permissions.canUseAISelector && <AIAssistant />}
     </div>
   )
 }
