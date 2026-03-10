@@ -18,7 +18,7 @@ import {
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { AIAssistant } from '@/components/ai/ai-assistant'
-import { usePermissions } from '@/lib/auth-context'
+import { usePermissions, useAuth } from '@/lib/auth-context'
 
 interface Season {
   id: string
@@ -63,6 +63,7 @@ interface Activity {
 
 export default function DashboardPage() {
   const permissions = usePermissions()
+  const { isTournamentManager } = useAuth()
   const [loading, setLoading] = useState(true)
   const [season, setSeason] = useState<Season | null>(null)
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([])
@@ -464,8 +465,8 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* AI Team Assistant - Available to all logged-in users */}
-      {permissions.canViewPlayers && <AIAssistant />}
+      {/* AI Team Assistant - Available to Viewer, Media Manager, and Admin (not Tournament Manager) */}
+      {permissions.canViewPlayers && !isTournamentManager && <AIAssistant />}
     </div>
   )
 }
