@@ -464,8 +464,8 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* AI Team Assistant - Admin only */}
-      {permissions.canUseAISelector && <AIAssistant />}
+      {/* AI Team Assistant - Available to all logged-in users */}
+      {permissions.canViewPlayers && <AIAssistant />}
     </div>
   )
 }
