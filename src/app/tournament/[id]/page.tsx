@@ -29,6 +29,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ScheduleGenerator } from '@/components/tournament/schedule-generator'
 
 interface TournamentTeam {
   id: string
@@ -93,7 +94,7 @@ export default function TournamentDetailPage() {
   const { canManageTournaments } = usePermissions()
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'fixtures' | 'standings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'schedule' | 'fixtures' | 'standings'>('overview')
   const [showAddTeam, setShowAddTeam] = useState(false)
   const [newTeamName, setNewTeamName] = useState('')
   const [isAddingTeam, setIsAddingTeam] = useState(false)
@@ -573,7 +574,7 @@ export default function TournamentDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-2 border-b">
-        {(['overview', 'teams', 'fixtures', 'standings'] as const).map((tab) => (
+        {(['overview', 'teams', 'schedule', 'fixtures', 'standings'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -794,6 +795,41 @@ export default function TournamentDetailPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {activeTab === 'schedule' && (
+        <div className="space-y-6">
+          <Card className="bg-gradient-to-r from-purple-50 to-cyan-50 border-purple-200">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                  <Sparkles className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Schedule Generator</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Generate groups and fixtures automatically based on your configuration.
+                    Works without AI - uses rule-based algorithms.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <ScheduleGenerator
+            tournamentId={tournament.id}
+            teams={tournament.teams.map(t => ({
+              id: t.id,
+              teamName: t.teamName,
+              seedRank: t.seedRank
+            }))}
+            startDate={tournament.startDate}
+            onScheduleGenerated={() => {
+              fetchTournament()
+              setActiveTab('fixtures')
+            }}
+          />
+        </div>
       )}
 
       {activeTab === 'fixtures' && (

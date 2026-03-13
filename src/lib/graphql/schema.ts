@@ -883,6 +883,10 @@ export const typeDefs = gql`
 
     # Natural Language Query
     askTeamAssistant(input: NLQueryInput!): NLQueryResult!
+
+    # Tournament Schedule Generation (rules-based, no AI)
+    generateTournamentSchedule(input: GenerateScheduleInput!): GenerateScheduleResult!
+    applyGeneratedSchedule(tournamentId: ID!, fixtures: [CreateTournamentFixtureInput!]!): Boolean!
   }
 
   type FormatAnalysisResult {
@@ -1265,6 +1269,59 @@ export const typeDefs = gql`
     isAvailable: Boolean
     isBlocked: Boolean
     blockReason: String
+  }
+
+  # ============================================
+  # SCHEDULE GENERATION TYPES
+  # ============================================
+
+  input GenerateScheduleInput {
+    tournamentId: ID!
+    teamsPerGroup: Int
+    gamesPerTeam: Int
+    venues: Int
+    saturdayGamesPerVenue: Int
+    sundayGamesPerVenue: Int
+    avoidDoubleHeaders: Boolean
+    startDate: DateTime
+  }
+
+  type GeneratedGroup {
+    groupName: String!
+    teams: [GeneratedTeamInfo!]!
+  }
+
+  type GeneratedTeamInfo {
+    id: String!
+    name: String!
+    seedRank: Int!
+  }
+
+  type GeneratedFixtureInfo {
+    homeTeam: GeneratedTeamInfo!
+    awayTeam: GeneratedTeamInfo!
+    groupName: String!
+    roundNumber: Int!
+    isCrossGroup: Boolean!
+    scheduledDate: DateTime
+    scheduledTime: String
+    venue: String
+  }
+
+  type ScheduleSummary {
+    totalGroups: Int!
+    totalFixtures: Int!
+    totalWeeks: Int!
+    gamesPerWeekend: Int!
+  }
+
+  type GenerateScheduleResult {
+    success: Boolean!
+    groups: [GeneratedGroup!]!
+    fixtures: [GeneratedFixtureInfo!]!
+    summary: ScheduleSummary!
+    warnings: [String!]!
+    formattedSchedule: String!
   }
 `
 

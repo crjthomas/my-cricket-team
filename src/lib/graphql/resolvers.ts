@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { generateSquadRecommendation } from '@/lib/ai/squad-selector'
 import { analyzeFormatDocument } from '@/lib/ai/tournament-scheduler'
 import { processNLQuery } from '@/lib/ai/nl-query'
+import { generateTournamentSchedule, formatScheduleForDisplay, type TeamSeed } from '@/lib/tournament/schedule-generator'
 import { calculatePlayerRatingChanges, calculateAllPlayerRatingChanges, applyRatingChanges } from '@/lib/rating-calculator'
 import { GraphQLScalarType, Kind } from 'graphql'
 import type { Player, SeasonStats, Match, Opponent, Season, Squad, SquadPlayer, PlayerAvailability, RatingHistory } from '@prisma/client'
@@ -2079,6 +2080,144 @@ export const resolvers = {
           confidence: 'LOW',
           queryType: 'GENERAL'
         }
+      }
+    },
+
+    generateTournamentSchedule: async (
+      _: unknown,
+      { input }: { 
+        input: {
+          tournamentId: string
+          teamsPerGroup?: number
+          gamesPerTeam?: number
+          venues?: number
+          saturdayGamesPerVenue?: number
+          sundayGamesPerVenue?: number
+          avoidDoubleHeaders?: boolean
+          startDate?: string
+        }
+      }
+    ) => {
+      try {
+        // Fetch tournament and teams
+        const tournament = await prisma.tournament.findUnique({
+          where: { id: input.tournamentId },
+          include: {
+            teams: {
+              where: { isWithdrawn: false, isConfirmed: true },
+              orderBy: { seedRank: 'asc' }
+            }
+          }
+        })
+
+        if (!tournament) {
+          throw new Error('Tournament not found')
+        }
+
+        if (tournament.teams.length < 4) {
+          throw new Error('Need at least 4 confirmed teams to generate schedule')
+        }
+
+        // Convert to TeamSeed format
+        const teams: TeamSeed[] = tournament.teams.map((t, index) => ({
+          id: t.id,
+          name: t.teamName,
+          seedRank: t.seedRank || index + 1
+        }))
+
+        // Generate schedule
+        const result = generateTournamentSchedule(teams, {
+          teamsPerGroup: input.teamsPerGroup || 5,
+          gamesPerTeam: input.gamesPerTeam || 5,
+          venues: input.venues || tournament.saturdayVenues || 6,
+          saturdayGamesPerVenue: input.saturdayGamesPerVenue || tournament.saturdaySlots || 2,
+          sundayGamesPerVenue: input.sundayGamesPerVenue || tournament.sundaySlots || 1,
+          avoidDoubleHeaders: input.avoidDoubleHeaders ?? true,
+          startDate: input.startDate ? new Date(input.startDate) : new Date(tournament.startDate)
+        })
+
+        // Format for display
+        const formattedSchedule = formatScheduleForDisplay(result)
+
+        return {
+          success: true,
+          groups: result.groups.map(g => ({
+            groupName: g.groupName,
+            teams: g.teams.map(t => ({
+              id: t.id,
+              name: t.name,
+              seedRank: t.seedRank
+            }))
+          })),
+          fixtures: result.schedule.map(f => ({
+            homeTeam: { id: f.homeTeam.id, name: f.homeTeam.name, seedRank: f.homeTeam.seedRank },
+            awayTeam: { id: f.awayTeam.id, name: f.awayTeam.name, seedRank: f.awayTeam.seedRank },
+            groupName: f.groupName,
+            roundNumber: f.roundNumber,
+            isCrossGroup: f.isCrossGroup,
+            scheduledDate: f.scheduledDate,
+            scheduledTime: f.scheduledTime,
+            venue: f.venue
+          })),
+          summary: result.summary,
+          warnings: result.warnings,
+          formattedSchedule
+        }
+      } catch (error) {
+        console.error('Schedule generation error:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        return {
+          success: false,
+          groups: [],
+          fixtures: [],
+          summary: { totalGroups: 0, totalFixtures: 0, totalWeeks: 0, gamesPerWeekend: 0 },
+          warnings: [`Error: ${errorMessage}`],
+          formattedSchedule: ''
+        }
+      }
+    },
+
+    applyGeneratedSchedule: async (
+      _: unknown,
+      { tournamentId, fixtures }: { 
+        tournamentId: string
+        fixtures: Array<{
+          homeTeamId?: string
+          awayTeamId?: string
+          scheduledDate?: string
+          scheduledTime?: string
+          roundId?: string
+          fixtureNumber?: number
+        }>
+      }
+    ) => {
+      try {
+        // Create fixtures in database
+        for (let i = 0; i < fixtures.length; i++) {
+          const f = fixtures[i]
+          await prisma.tournamentFixture.create({
+            data: {
+              tournamentId,
+              homeTeamId: f.homeTeamId,
+              awayTeamId: f.awayTeamId,
+              scheduledDate: f.scheduledDate ? new Date(f.scheduledDate) : null,
+              scheduledTime: f.scheduledTime,
+              fixtureNumber: f.fixtureNumber || i + 1,
+              status: 'SCHEDULED'
+            }
+          })
+        }
+
+        // Update tournament status
+        await prisma.tournament.update({
+          where: { id: tournamentId },
+          data: { status: 'IN_PROGRESS' }
+        })
+
+        return true
+      } catch (error) {
+        console.error('Apply schedule error:', error)
+        return false
       }
     },
   },
